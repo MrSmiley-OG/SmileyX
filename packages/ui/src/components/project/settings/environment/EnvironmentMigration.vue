@@ -12,50 +12,61 @@ import {
 	useSavable,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 
 const { formatMessage } = useVIntl()
 
-const { currentMember, projectV2, projectV3, refreshProject } = injectProjectPageContext()
+const props = withDefaults(
+	defineProps<{
+		showFloatingSave?: boolean
+	}>(),
+	{
+		showFloatingSave: true,
+	},
+)
+
+const { currentMember, projectV2, projectV3, invalidate } = injectProjectPageContext()
 const { handleError } = injectNotificationManager()
 const client = injectModrinthClient()
 
-const saving = ref(false)
-
 const supportsEnvironment = computed(() =>
-	projectV3.value.project_types.some((type) => ['mod', 'modpack'].includes(type)),
+	(projectV3.value?.project_types ?? []).some((type) => ['mod', 'modpack'].includes(type)),
 )
 
 const needsToVerify = computed(
 	() =>
-		projectV3.value.side_types_migration_review_status === 'pending' &&
-		(projectV3.value.environment?.length ?? 0) > 0 &&
-		projectV3.value.environment?.[0] !== 'unknown' &&
+		projectV3.value?.side_types_migration_review_status === 'pending' &&
+		(projectV3.value?.environment?.length ?? 0) > 0 &&
+		projectV3.value?.environment?.[0] !== 'unknown' &&
 		supportsEnvironment.value,
 )
 
 const hasPermission = computed(() => {
 	const EDIT_DETAILS = 1 << 2
-	return (currentMember.value?.permissions & EDIT_DETAILS) === EDIT_DETAILS
+	return ((currentMember.value?.permissions ?? 0) & EDIT_DETAILS) === EDIT_DETAILS
 })
 
 function getInitialEnv() {
-	return projectV3.value.environment?.length === 1 ? projectV3.value.environment[0] : undefined
+	const env = projectV3.value?.environment
+	return env?.length === 1 ? env[0] : undefined
 }
 
-const { saved, current, reset, save } = useSavable(
+const { saved, current, saving, reset, save, hasChanges } = useSavable(
 	() => ({
 		environment: getInitialEnv(),
-		side_types_migration_review_status: projectV3.value.side_types_migration_review_status,
+		side_types_migration_review_status: projectV3.value?.side_types_migration_review_status,
 	}),
-	({ environment, side_types_migration_review_status }) => {
-		saving.value = true
-		side_types_migration_review_status = 'reviewed'
-		client.labrinth.projects_v3
-			.edit(projectV2.value.id, { environment, side_types_migration_review_status })
-			.then(() => refreshProject().then(reset))
-			.catch(handleError)
-			.finally(() => (saving.value = false))
+	async ({ environment }) => {
+		try {
+			await client.labrinth.projects_v3.edit(projectV2.value.id, {
+				environment,
+				side_types_migration_review_status: 'reviewed',
+			})
+			await invalidate()
+			reset()
+		} catch (err) {
+			handleError(err as Error)
+		}
 	},
 )
 // Set current to reviewed, which will trigger unsaved changes popup.
@@ -64,6 +75,24 @@ const originalEnv = getInitialEnv()
 if (originalEnv && originalEnv !== 'unknown') {
 	current.value.side_types_migration_review_status = 'reviewed'
 }
+
+const canReset = computed(() => !needsToVerify.value)
+const canSave = computed(
+	() =>
+		supportsEnvironment.value &&
+		hasPermission.value &&
+		(projectV3.value?.environment?.length ?? 0) <= 1,
+)
+
+defineExpose({
+	hasChanges,
+	saving,
+	canReset,
+	canSave,
+	needsToVerify,
+	reset,
+	save,
+})
 
 const messages = defineMessages({
 	verifyButton: {
@@ -129,7 +158,7 @@ const messages = defineMessages({
 			/>
 			<Admonition
 				v-else-if="
-					!projectV3.environment ||
+					!projectV3?.environment ||
 					projectV3.environment.length === 0 ||
 					(projectV3.environment.length === 1 && projectV3.environment[0] === 'unknown')
 				"
@@ -139,7 +168,7 @@ const messages = defineMessages({
 				class="mb-3"
 			/>
 			<Admonition
-				v-else-if="projectV3.environment.length > 1"
+				v-else-if="(projectV3?.environment?.length ?? 0) > 1"
 				type="info"
 				:header="formatMessage(messages.multipleEnvironmentsTitle)"
 				:body="formatMessage(messages.multipleEnvironmentsDescription)"
@@ -158,11 +187,11 @@ const messages = defineMessages({
 			/>
 		</template>
 		<UnsavedChangesPopup
-			v-if="supportsEnvironment && hasPermission && (projectV3?.environment?.length ?? 0) <= 1"
+			v-if="props.showFloatingSave && canSave"
 			:original="saved"
 			:modified="current"
 			:saving="saving"
-			:can-reset="!needsToVerify"
+			:can-reset="canReset"
 			:text="needsToVerify ? messages.verifyLabel : undefined"
 			:save-label="needsToVerify ? messages.verifyButton : undefined"
 			:save-icon="needsToVerify ? CheckIcon : undefined"

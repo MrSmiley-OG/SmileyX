@@ -8,7 +8,7 @@
 		proceed-label="Cancel transfer"
 		@proceed="confirmCancel"
 	/>
-	<div class="experimental-styles-within mx-auto max-w-[78.5rem] p-4">
+	<div class="mx-auto max-w-[78.5rem] p-4">
 		<div
 			class="mb-6 flex items-end justify-between border-0 border-b border-solid border-divider pb-4"
 		>
@@ -76,11 +76,11 @@
 							</div>
 						</div>
 						<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-secondary">
-							<span v-tooltip="dayjs(batch.created_at).format('MMMM D, YYYY [at] h:mm A')">
+							<span v-tooltip="formatDateTime(batch.created_at)">
 								Created {{ formatRelativeTime(batch.created_at) }}
 							</span>
 							<span>•</span>
-							<span v-tooltip="dayjs(batch.scheduled_at).format('MMMM D, YYYY [at] h:mm A')">
+							<span v-tooltip="formatDateTime(batch.scheduled_at)">
 								Scheduled {{ formatRelativeTime(batch.scheduled_at) }}
 							</span>
 							<template v-if="batch.provision_options?.region">
@@ -108,14 +108,17 @@
 </template>
 
 <script setup lang="ts">
+import type { Archon } from '@modrinth/api-client'
 import { PlusIcon, XCircleIcon } from '@modrinth/assets'
 import {
 	Avatar,
 	ButtonStyled,
 	ConfirmModal,
+	injectModrinthClient,
 	injectNotificationManager,
 	Pagination,
 	TagItem,
+	useFormatDateTime,
 	useRelativeTime,
 } from '@modrinth/ui'
 import type { User } from '@modrinth/utils'
@@ -123,34 +126,16 @@ import dayjs from 'dayjs'
 import { computed, ref } from 'vue'
 
 import TransferModal from '~/components/ui/admin/TransferModal.vue'
-import { useServersFetch } from '~/composables/servers/servers-fetch.ts'
 
 const { addNotification } = injectNotificationManager()
+const client = injectModrinthClient()
 const formatRelativeTime = useRelativeTime()
+const formatDateTime = useFormatDateTime({
+	timeStyle: 'short',
+	dateStyle: 'long',
+})
 
-// Types
-interface ProvisionOptions {
-	region?: string | null
-	node_tags?: string[]
-}
-
-interface TransferBatch {
-	id: number
-	created_by: string
-	created_at: string
-	reason: string | null
-	scheduled_at: string
-	cancelled: boolean
-	log_count: number
-	provision_options: ProvisionOptions
-}
-
-interface HistoryResponse {
-	batches: TransferBatch[]
-	total: number
-	page: number
-	page_size: number
-}
+type TransferBatch = Archon.Transfers.Internal.TransferLogBatchEntry
 
 const transferModal = ref<InstanceType<typeof TransferModal>>()
 const cancelModal = ref<InstanceType<typeof ConfirmModal>>()
@@ -173,10 +158,10 @@ async function refreshHistory() {
 	loading.value = true
 	error.value = null
 	try {
-		const data = await useServersFetch<HistoryResponse>(
-			`/transfers/history?page=${currentPage.value}&page_size=${pageSize}`,
-			{ version: 'internal' },
-		)
+		const data = await client.archon.transfers_internal.history({
+			page: currentPage.value,
+			page_size: pageSize,
+		})
 		batches.value = data.batches || []
 		total.value = data.total || 0
 
@@ -278,12 +263,8 @@ function showCancelModal(batchId: number) {
 async function confirmCancel() {
 	if (!cancellingBatchId.value) return
 	try {
-		await useServersFetch('/transfers/cancel', {
-			version: 'internal',
-			method: 'POST',
-			body: {
-				batch_ids: [cancellingBatchId.value],
-			},
+		await client.archon.transfers_internal.cancel({
+			batch_ids: [cancellingBatchId.value],
 		})
 		addNotification({
 			title: 'Transfer cancelled',

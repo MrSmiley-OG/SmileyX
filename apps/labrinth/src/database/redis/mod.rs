@@ -1,20 +1,24 @@
+use crate::env::ENV;
+
 use super::models::DatabaseError;
 use ariadne::ids::base62_impl::{parse_base62, to_base62};
 use chrono::{TimeZone, Utc};
 use dashmap::DashMap;
 use deadpool_redis::{Config, Runtime};
+use futures::TryStreamExt;
 use futures::future::Either;
+use futures::stream::{FuturesUnordered, StreamExt};
 use prometheus::{IntGauge, Registry};
-use redis::{ExistenceCheck, SetExpiry, SetOptions, ToRedisArgs};
+use redis::ToRedisArgs;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::future::Future;
 use std::hash::Hash;
+use std::sync::Arc;
 use std::time::Duration;
-use std::time::Instant;
-use tracing::{Instrument, info_span};
+use tracing::{Instrument, info, info_span};
 use util::{cmd, redis_pipe};
 
 pub mod util;
@@ -22,65 +26,91 @@ pub mod util;
 const DEFAULT_EXPIRY: i64 = 60 * 60 * 12; // 12 hours
 const ACTUAL_EXPIRY: i64 = 60 * 30; // 30 minutes
 
+// Bound how many commands we send in a single Redis pipeline. The multiplexed
+// connection's BytesMut write buffer keeps its peak capacity for the life of
+// the connection, so larger pipelines cause higher steady-state RSS.
+const PIPELINE_CHUNK_SIZE: usize = 25;
+// Bound how many keys we send in a single MGET. Each MGET response must fit
+// into the connection's read buffer, which also retains its peak capacity. At
+// ~1 MB per cached value, 32 keys caps any single response at ~32 MB.
+const MGET_CHUNK_SIZE: usize = 32;
+// How long a pooled Redis connection lives before being recycled, regardless
+// of activity. Forced recycling is the only way to release the per-connection
+// BytesMut peak capacity that builds up under steady load.
+const REDIS_MAX_CONN_AGE: Duration = Duration::from_secs(120);
+
 #[derive(Clone)]
 pub struct RedisPool {
     pub url: String,
-    pub pool: util::InstrumentedPool,
-    meta_namespace: String,
+    pub pool: deadpool_redis::Pool,
+    cache_list: Arc<DashMap<String, util::CacheSubscriber>>,
+    meta_namespace: Arc<str>,
 }
 
 pub struct RedisConnection {
     pub connection: deadpool_redis::Connection,
-    meta_namespace: String,
+    meta_namespace: Arc<str>,
 }
 
 impl RedisPool {
     // initiate a new redis pool
     // testing pool uses a hashmap to mimic redis behaviour for very small data sizes (ie: tests)
     // PANICS: production pool will panic if redis url is not set
-    pub fn new(meta_namespace: Option<String>) -> Self {
-        let wait_timeout =
-            dotenvy::var("REDIS_WAIT_TIMEOUT_MS").ok().map_or_else(
-                || Duration::from_millis(15000),
-                |x| {
-                    Duration::from_millis(
-                        x.parse::<u64>().expect(
-                            "REDIS_WAIT_TIMEOUT_MS must be a valid u64",
-                        ),
-                    )
-                },
-            );
+    pub fn new(meta_namespace: impl Into<Arc<str>>) -> Self {
+        let wait_timeout = Duration::from_millis(ENV.REDIS_WAIT_TIMEOUT_MS);
 
-        let url = dotenvy::var("REDIS_URL").expect("Redis URL not set");
+        let url = &ENV.REDIS_URL;
         let pool = Config::from_url(url.clone())
             .builder()
             .expect("Error building Redis pool")
-            .max_size(
-                dotenvy::var("REDIS_MAX_CONNECTIONS")
-                    .ok()
-                    .and_then(|x| x.parse().ok())
-                    .unwrap_or(10000),
-            )
+            .max_size(ENV.REDIS_MAX_CONNECTIONS as usize)
             .wait_timeout(Some(wait_timeout))
             .runtime(Runtime::Tokio1)
             .build()
             .expect("Redis connection failed");
 
         let pool = RedisPool {
-            url,
-            pool: util::InstrumentedPool::new(pool),
-            meta_namespace: meta_namespace.unwrap_or("".to_string()),
+            url: url.clone(),
+            pool,
+            cache_list: Arc::new(DashMap::with_capacity(2048)),
+            meta_namespace: meta_namespace.into(),
         };
 
+        let redis_min_connections = ENV.REDIS_MIN_CONNECTIONS;
+        let spawn_min_connections = (0..redis_min_connections)
+            .map(|_| {
+                let pool = pool.clone();
+                tokio::spawn(async move { pool.pool.get().await })
+            })
+            .collect::<FuturesUnordered<_>>();
+        tokio::spawn({
+            let pool = pool.clone();
+            async move {
+                // collect the connections into a buffer while we're spawning them,
+                // to make sure that we're not `get`ing any connections we previously took
+                let _connections =
+                    spawn_min_connections.try_collect::<Vec<_>>().await;
+                info!(
+                    pool_status = ?pool.pool.status(),
+                    "Finished getting {redis_min_connections} initial Redis connections"
+                );
+            }
+        });
+
         let interval = Duration::from_secs(30);
-        let max_age = Duration::from_secs(5 * 60); // 5 minutes
+        let max_idle = Duration::from_secs(5 * 60); // 5 minutes
         let pool_ref = pool.clone();
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(interval).await;
-                pool_ref
-                    .pool
-                    .retain(|_, metrics| metrics.last_used() < max_age);
+                pool_ref.pool.retain(|_, metrics| {
+                    // Drop connections that have been idle too long, OR that
+                    // are older than REDIS_MAX_CONN_AGE regardless of use.
+                    // The age-based recycle is what releases the per-connection
+                    // BytesMut peak capacity under steady traffic.
+                    metrics.last_used() < max_idle
+                        && metrics.created.elapsed() < REDIS_MAX_CONN_AGE
+                });
             }
         });
 
@@ -291,13 +321,16 @@ impl RedisPool {
                             })
                             .collect::<Vec<_>>();
 
-                        let v = cmd("MGET")
-                            .arg(&args)
-                            .query_async::<Vec<Option<String>>>(&mut connection)
-                            .await?
-                            .into_iter()
-                            .flatten()
-                            .collect::<Vec<_>>();
+                        let mut v = Vec::new();
+                        for chunk in args.chunks(MGET_CHUNK_SIZE) {
+                            let part = cmd("MGET")
+                                .arg(chunk)
+                                .query_async::<Vec<Option<String>>>(
+                                    &mut connection,
+                                )
+                                .await?;
+                            v.extend(part.into_iter().flatten());
+                        }
                         Ok::<_, DatabaseError>(v)
                     }
                     .instrument(info_span!("get slug ids"))
@@ -319,19 +352,20 @@ impl RedisPool {
                     .map(|x| format!("{}_{namespace}:{x}", self.meta_namespace))
                     .collect::<Vec<_>>();
 
-                let cached_values = cmd("MGET")
-                    .arg(&args)
-                    .query_async::<Vec<Option<String>>>(&mut connection)
-                    .await?
-                    .into_iter()
-                    .filter_map(|x| {
+                let mut cached_values = HashMap::new();
+                for chunk in args.chunks(MGET_CHUNK_SIZE) {
+                    let part = cmd("MGET")
+                        .arg(chunk)
+                        .query_async::<Vec<Option<String>>>(&mut connection)
+                        .await?;
+                    cached_values.extend(part.into_iter().filter_map(|x| {
                         x.and_then(|val| {
                             serde_json::from_str::<RedisValue<T, K, S>>(&val)
                                 .ok()
                         })
                         .map(|val| (val.key.clone(), val))
-                    })
-                    .collect::<HashMap<_, _>>();
+                    }));
+                }
 
                 Ok::<_, DatabaseError>((cached_values, ids))
             }
@@ -370,59 +404,51 @@ impl RedisPool {
             .collect::<HashMap<_, _>>();
 
         let subscribe_ids = DashMap::new();
+        let mut cache_writers = HashMap::new();
 
         if !ids.is_empty() {
-            let mut pipe = redis_pipe();
-
             let fetch_ids =
                 ids.iter().map(|x| x.key().clone()).collect::<Vec<_>>();
 
-            fetch_ids.iter().for_each(|key| {
-                pipe.atomic().set_options(
-                    // We store locks in lowercase because they are case insensitive
-                    format!(
-                        "{}_{namespace}:{}/lock",
-                        self.meta_namespace,
-                        key.to_lowercase()
-                    ),
-                    100,
-                    SetOptions::default()
-                        .get(true)
-                        .conditional_set(ExistenceCheck::NX)
-                        .with_expiration(SetExpiry::EX(60)),
+            fetch_ids.into_iter().for_each(|key| {
+                let ns_key_value = if case_sensitive {
+                    key.to_lowercase()
+                } else {
+                    key.clone()
+                };
+                let namespaced_key = format!(
+                    "{}_{namespace}:{ns_key_value}",
+                    self.meta_namespace,
                 );
-            });
-            let results = {
-                let mut connection = self.pool.get().await?;
+                let either = self.acquire_lock(namespaced_key);
 
-                pipe.query_async::<Vec<Option<i32>>>(&mut connection)
-                    .await?
-            };
+                match either {
+                    Either::Left(sentinel) => {
+                        cache_writers.insert(key, sentinel);
+                    }
 
-            for (idx, key) in fetch_ids.into_iter().enumerate() {
-                if let Some(locked) = results.get(idx)
-                    && locked.is_none()
-                {
-                    continue;
-                }
+                    Either::Right(subscriber) => {
+                        if let Some((key, raw_key)) = ids.remove(&key) {
+                            if let Some(val) = expired_values.remove(&key) {
+                                if let Some(ref alias) = val.alias {
+                                    ids.remove(&alias.to_string());
+                                }
 
-                if let Some((key, raw_key)) = ids.remove(&key) {
-                    if let Some(val) = expired_values.remove(&key) {
-                        if let Some(ref alias) = val.alias {
-                            ids.remove(&alias.to_string());
+                                if let Ok(value) =
+                                    val.key.to_string().parse::<u64>()
+                                {
+                                    let base62 = to_base62(value);
+                                    ids.remove(&base62);
+                                }
+
+                                cached_values.insert(val.key.clone(), val);
+                            } else {
+                                subscribe_ids.insert(raw_key, subscriber);
+                            }
                         }
-
-                        if let Ok(value) = val.key.to_string().parse::<u64>() {
-                            let base62 = to_base62(value);
-                            ids.remove(&base62);
-                        }
-
-                        cached_values.insert(val.key.clone(), val);
-                    } else {
-                        subscribe_ids.insert(key, raw_key);
                     }
                 }
-            }
+            });
         }
 
         let mut fetch_tasks = Vec::new();
@@ -436,6 +462,10 @@ impl RedisPool {
                 let mut return_values = HashMap::new();
 
                 let mut pipe = redis_pipe();
+                let mut pipe_cmds: usize = 0;
+                let mut connection = self.pool.get().await?;
+                // Doesn't need to be atomic
+
                 if !vals.is_empty() {
                     for (key, (slug, value)) in vals {
                         let value = RedisValue {
@@ -445,7 +475,7 @@ impl RedisPool {
                             alias: slug.clone(),
                         };
 
-                        pipe.atomic().set_ex(
+                        pipe.set_ex(
                             format!(
                                 "{}_{namespace}:{key}",
                                 self.meta_namespace
@@ -453,6 +483,7 @@ impl RedisPool {
                             serde_json::to_string(&value)?,
                             DEFAULT_EXPIRY as u64,
                         );
+                        pipe_cmds += 1;
 
                         if let Some(slug) = slug {
                             ids.remove(&slug.to_string());
@@ -464,7 +495,7 @@ impl RedisPool {
                                     slug.to_string().to_lowercase()
                                 };
 
-                                pipe.atomic().set_ex(
+                                pipe.set_ex(
                                     format!(
                                         "{}_{slug_namespace}:{}",
                                         self.meta_namespace, actual_slug
@@ -472,13 +503,7 @@ impl RedisPool {
                                     key.to_string(),
                                     DEFAULT_EXPIRY as u64,
                                 );
-
-                                pipe.atomic().del(format!(
-                                    "{}_{namespace}:{}/lock",
-                                    // Locks are stored in lowercase
-                                    self.meta_namespace,
-                                    actual_slug.to_lowercase()
-                                ));
+                                pipe_cmds += 1;
                             }
                         }
 
@@ -488,102 +513,51 @@ impl RedisPool {
                         if let Ok(value) = key_str.parse::<u64>() {
                             let base62 = to_base62(value);
                             ids.remove(&base62);
-
-                            pipe.atomic().del(format!(
-                                "{}_{namespace}:{}/lock",
-                                self.meta_namespace,
-                                // Locks are stored in lowercase
-                                base62.to_lowercase()
-                            ));
                         }
 
-                        pipe.atomic().del(format!(
-                            "{}_{namespace}:{key}/lock",
-                            self.meta_namespace
-                        ));
-
                         return_values.insert(key, value);
+
+                        if pipe_cmds >= PIPELINE_CHUNK_SIZE {
+                            pipe.query_async::<()>(&mut connection).await?;
+                            pipe = redis_pipe();
+                            pipe_cmds = 0;
+                        }
                     }
                 }
 
-                for (key, _) in ids {
-                    pipe.atomic().del(format!(
-                        "{}_{namespace}:{}/lock",
-                        self.meta_namespace,
-                        key.to_lowercase()
-                    ));
-                    pipe.atomic().del(format!(
-                        "{}_{namespace}:{key}/lock",
-                        self.meta_namespace
-                    ));
+                if pipe_cmds > 0 {
+                    pipe.query_async::<()>(&mut connection).await?;
                 }
 
-                let mut connection = self.pool.get().await?;
-                pipe.query_async::<()>(&mut connection).await?;
+                drop(cache_writers);
 
-                Ok(return_values)
+                Result::<_, DatabaseError>::Ok(return_values)
             }));
         }
 
         if !subscribe_ids.is_empty() {
-            fetch_tasks.push(Either::Right(async {
-                let mut wait_time_ms = 50;
-                let start = Utc::now();
-                let mut redis_budget = Duration::ZERO;
+            fetch_tasks.push(Either::Right(async move {
+                let mut futures = FuturesUnordered::new();
+                let len = subscribe_ids.len();
 
-                loop {
-                    let results = {
-                        let acquire_start = Instant::now();
-                        let mut connection = self.pool.get().await?;
-                        let args = subscribe_ids
-                            .iter()
-                            .map(|x| {
-                                format!(
-                                    "{}_{namespace}:{}/lock",
-                                    self.meta_namespace,
-                                    // We lowercase key because locks are stored in lowercase
-                                    x.key().to_lowercase()
-                                )
-                            })
-                            .collect::<Vec<_>>();
-                        redis_budget += acquire_start.elapsed();
-
-                        cmd("MGET")
-                            .arg(&args)
-                            .query_async::<Vec<Option<String>>>(&mut connection)
-                            .await?
-                    };
-
-                    let exist_count =
-                        results.into_iter().filter(|x| x.is_some()).count();
-
-                    // None of the locks exist anymore, we can continue
-                    if exist_count == 0 {
-                        break;
-                    }
-
-                    let spinning = Utc::now() - start;
-                    if spinning > chrono::Duration::seconds(5) {
-                        return Err(DatabaseError::CacheTimeout {
-                            locks_released: subscribe_ids.len() - exist_count,
-                            locks_waiting: subscribe_ids.len(),
-                            time_spent_pool_wait_ms: redis_budget.as_millis()
-                                as u64,
-                            time_spent_total_ms: spinning
-                                .num_milliseconds()
-                                .max(0)
-                                as u64,
-                        });
-                    }
-
-                    tokio::time::sleep(Duration::from_millis(wait_time_ms))
-                        .await;
-                    wait_time_ms *= 2; // 50, 100, 200, 400, 800, 1600, 3200
+                for (key, subscriber) in subscribe_ids {
+                    futures.push(async move {
+                        (
+                            key,
+                            subscriber
+                                .wait_timeout(Duration::from_secs(5))
+                                .await,
+                        )
+                    });
                 }
 
-                let (return_values, _) =
-                    get_cached_values(subscribe_ids).await?;
+                let fetch_ids = DashMap::with_capacity(len);
+                while let Some((key, result)) = futures.next().await {
+                    result?;
+                    fetch_ids.insert(key.to_string(), key);
+                }
 
+                let (return_values, _) = get_cached_values(fetch_ids).await?;
                 Ok(return_values)
             }));
         }
@@ -597,6 +571,42 @@ impl RedisPool {
         }
 
         Ok(cached_values.into_iter().map(|x| (x.0, x.1.val)).collect())
+    }
+
+    /// Acquire or create a cache lock onto the given key.
+    fn acquire_lock(
+        &self,
+        key: String,
+    ) -> Either<LockSentinel<'_>, util::CacheSubscriber> {
+        let mut out_writer = None;
+        let subscriber =
+            self.cache_list.entry(key.clone()).or_insert_with(|| {
+                let (writer, subscriber) = util::cache();
+                out_writer = Some(writer);
+                subscriber
+            });
+
+        match out_writer {
+            Some(writer) => Either::Left(LockSentinel {
+                pool: self,
+                key,
+                writer,
+            }),
+            None => Either::Right(subscriber.clone()),
+        }
+    }
+}
+
+struct LockSentinel<'a> {
+    pool: &'a RedisPool,
+    key: String,
+    writer: util::CacheWriter,
+}
+
+impl<'a> Drop for LockSentinel<'a> {
+    fn drop(&mut self) {
+        self.writer.write();
+        self.pool.cache_list.remove(&self.key);
     }
 }
 
@@ -787,6 +797,20 @@ impl RedisConnection {
             .query_async(&mut self.connection)
             .await?;
         Ok(values)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn incr(
+        &mut self,
+        namespace: &str,
+        id: &str,
+    ) -> Result<Option<u64>, DatabaseError> {
+        let key = format!("{}_{namespace}:{id}", self.meta_namespace);
+        let value = cmd("INCR")
+            .arg(key)
+            .query_async(&mut self.connection)
+            .await?;
+        Ok(value)
     }
 }
 

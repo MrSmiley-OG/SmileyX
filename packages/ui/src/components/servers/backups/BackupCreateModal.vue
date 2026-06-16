@@ -1,17 +1,16 @@
 <template>
-	<NewModal ref="modal" header="Create backup" @show="focusInput">
-		<div class="flex flex-col gap-2 md:w-[600px] -mb-2">
+	<NewModal ref="modal" header="Create backup" width="500px" @show="focusInput">
+		<div class="flex flex-col gap-2 -mb-2">
 			<label for="backup-name-input">
 				<span class="text-lg font-semibold text-contrast">Name</span>
 			</label>
-			<input
+			<StyledInput
 				id="backup-name-input"
 				ref="input"
 				v-model="backupName"
-				type="text"
-				class="w-full rounded-lg bg-bg-input p-4"
 				:placeholder="`Backup #${newBackupAmount}`"
-				maxlength="48"
+				:maxlength="48"
+				wrapper-class="w-full"
 			/>
 			<Transition
 				enter-active-class="transition-all duration-300 ease-out"
@@ -46,15 +45,19 @@
 			</Transition>
 		</div>
 		<template #actions>
-			<div class="w-full flex flex-row gap-2 justify-end">
+			<div class="flex gap-2 justify-end">
 				<ButtonStyled type="outlined">
-					<button class="!border-[1px] !border-surface-4" @click="hideModal">
+					<button @click="hideModal">
 						<XIcon />
 						Cancel
 					</button>
 				</ButtonStyled>
 				<ButtonStyled color="brand">
-					<button :disabled="createMutation.isPending.value || nameExists" @click="createBackup">
+					<button
+						v-tooltip="createDisabledTooltip"
+						:disabled="createDisabled"
+						@click="createBackup"
+					>
 						<PlusIcon />
 						Create backup
 					</button>
@@ -70,27 +73,41 @@ import { IssuesIcon, PlusIcon, XIcon } from '@modrinth/assets'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { computed, nextTick, ref } from 'vue'
 
+import { useVIntl } from '../../../composables/i18n'
 import {
 	injectModrinthClient,
 	injectModrinthServerContext,
 	injectNotificationManager,
 } from '../../../providers'
+import { commonMessages } from '../../../utils'
 import ButtonStyled from '../../base/ButtonStyled.vue'
+import StyledInput from '../../base/StyledInput.vue'
 import NewModal from '../../modal/NewModal.vue'
 
 const { addNotification } = injectNotificationManager()
+const { formatMessage } = useVIntl()
 const client = injectModrinthClient()
 const queryClient = useQueryClient()
 const ctx = injectModrinthServerContext()
 
-const props = defineProps<{
-	backups?: Archon.Backups.v1.Backup[]
-}>()
+const props = withDefaults(
+	defineProps<{
+		backups?: Archon.BackupsQueue.v1.BackupQueueBackup[]
+		canCreate?: boolean
+		permissionDeniedMessage?: string
+	}>(),
+	{
+		backups: undefined,
+		canCreate: true,
+		permissionDeniedMessage: undefined,
+	},
+)
 
-const backupsQueryKey = ['backups', 'list', ctx.serverId]
+const backupsQueryKey = ['backups', 'queue', ctx.serverId]
 
 const createMutation = useMutation({
-	mutationFn: (name: string) => client.archon.backups_v0.create(ctx.serverId, { name }),
+	mutationFn: (name: string) =>
+		client.archon.backups_queue_v1.create(ctx.serverId, ctx.worldId.value!, { name }),
 	onSuccess: () => queryClient.invalidateQueries({ queryKey: backupsQueryKey }),
 })
 
@@ -108,6 +125,14 @@ const nameExists = computed(() => {
 		(backup) => backup.name.trim().toLowerCase() === trimmedName.value.toLowerCase(),
 	)
 })
+const createDisabled = computed(
+	() => createMutation.isPending.value || nameExists.value || !props.canCreate,
+)
+const createDisabledTooltip = computed(() =>
+	props.canCreate
+		? undefined
+		: (props.permissionDeniedMessage ?? formatMessage(commonMessages.noPermissionAction)),
+)
 
 const focusInput = () => {
 	nextTick(() => {
@@ -128,6 +153,7 @@ const hideModal = () => {
 }
 
 const createBackup = () => {
+	if (!props.canCreate) return
 	const name = trimmedName.value || `Backup #${newBackupAmount.value}`
 	isRateLimited.value = false
 

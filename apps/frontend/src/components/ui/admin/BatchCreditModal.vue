@@ -20,12 +20,12 @@
 				<label for="days" class="flex flex-col gap-1">
 					<span class="text-lg font-semibold text-contrast"> Days to credit </span>
 				</label>
-				<input
+				<StyledInput
 					id="days"
-					v-model.number="days"
-					class="w-32"
+					v-model="days"
+					wrapper-class="w-32"
 					type="number"
-					min="1"
+					:min="1"
 					autocomplete="off"
 				/>
 			</div>
@@ -36,11 +36,10 @@
 						<span class="text-lg font-semibold text-contrast"> Node hostnames </span>
 					</label>
 					<div class="flex items-center gap-2">
-						<input
+						<StyledInput
 							id="node-input"
 							v-model="nodeInput"
-							class="w-32"
-							type="text"
+							wrapper-class="w-32"
 							autocomplete="off"
 						/>
 						<ButtonStyled color="blue" color-fill="text">
@@ -90,17 +89,16 @@
 					</span>
 				</label>
 				<div
-					class="text-muted flex flex-col gap-2 rounded-lg border border-divider bg-button-bg p-4"
+					class="text-muted flex flex-col gap-2 rounded-lg border border-surface-5 bg-button-bg p-4"
 				>
 					<span>Hi {user.name},</span>
-					<div class="textarea-wrapper">
-						<textarea
-							id="message-batch"
-							v-model="message"
-							rows="3"
-							class="w-full overflow-hidden !bg-surface-3"
-						/>
-					</div>
+					<StyledInput
+						id="message-batch"
+						v-model="message"
+						multiline
+						:rows="3"
+						input-class="!bg-surface-3"
+					/>
 					<span>
 						To make up for it, we've added {{ days }} day{{ pluralize(days) }} to your Modrinth
 						Servers subscription.
@@ -135,8 +133,10 @@ import { CheckIcon, PlusIcon, XIcon } from '@modrinth/assets'
 import {
 	ButtonStyled,
 	Combobox,
+	injectModrinthClient,
 	injectNotificationManager,
 	NewModal,
+	StyledInput,
 	TagItem,
 	Toggle,
 } from '@modrinth/ui'
@@ -144,9 +144,9 @@ import { DEFAULT_CREDIT_EMAIL_MESSAGE } from '@modrinth/utils/utils.ts'
 import { computed, ref } from 'vue'
 
 import { useBaseFetch } from '#imports'
-import { useServersFetch } from '~/composables/servers/servers-fetch.ts'
 
 const { addNotification } = injectNotificationManager()
+const client = injectModrinthClient()
 
 const modal = ref<InstanceType<typeof NewModal>>()
 
@@ -206,12 +206,12 @@ const applyDisabled = computed(() => {
 async function ensureOverview() {
 	if (regions.value.length || nodeHostnames.value.length) return
 	try {
-		const data = await useServersFetch<any>('/nodes/overview', { version: 'internal' })
-		regions.value = (data.regions || []).map((r: any) => ({
+		const data = await client.archon.nodes_internal.overview()
+		regions.value = data.regions.map((r) => ({
 			value: r.key,
 			label: `${r.display_name} (${r.key})`,
 		}))
-		nodeHostnames.value = data.node_hostnames || []
+		nodeHostnames.value = data.node_hostnames
 		if (!selectedRegion.value && regions.value.length) selectedRegion.value = regions.value[0].value
 	} catch (err) {
 		addNotification({ title: 'Failed to load nodes overview', text: String(err), type: 'error' })

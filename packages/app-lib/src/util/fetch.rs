@@ -9,13 +9,40 @@ use parking_lot::Mutex;
 use rand::Rng;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::time::{self};
 use tokio::sync::Semaphore;
-use tokio::{fs::File, io::AsyncWriteExt};
+use tokio::{fs::File, io::AsyncReadExt, io::AsyncWriteExt};
+
+pub const DOWNLOAD_META_HEADER: &str = "modrinth-download-meta";
+
+#[derive(Debug, derive_more::Display, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[display(rename_all = "snake_case")]
+pub enum DownloadReason {
+    Standalone,
+    Dependency,
+    Modpack,
+    Update,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DownloadMeta {
+    pub reason: DownloadReason,
+    pub game_version: String,
+    pub loader: String,
+    pub dependent_on: Option<String>,
+}
+
+impl DownloadMeta {
+    pub fn to_header_value(&self) -> String {
+        serde_json::to_string(self).unwrap_or_default()
+    }
+}
 
 #[derive(Debug)]
 pub struct IoSemaphore(pub Semaphore);
@@ -130,18 +157,24 @@ static GLOBAL_FETCH_FENCE: LazyLock<FetchFence> =
         inner: Mutex::new(FenceInner::new()),
     });
 
-pub static REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    let mut headers = reqwest::header::HeaderMap::new();
-
-    let header =
-        reqwest::header::HeaderValue::from_str(&crate::launcher_user_agent())
-            .unwrap();
-    headers.insert(reqwest::header::USER_AGENT, header);
+fn reqwest_client_builder() -> reqwest::ClientBuilder {
     reqwest::Client::builder()
         .tcp_keepalive(Some(time::Duration::from_secs(10)))
-        .default_headers(headers)
+        .user_agent(crate::launcher_user_agent())
+}
+
+pub static INSECURE_REQWEST_CLIENT: LazyLock<reqwest::Client> =
+    LazyLock::new(|| {
+        reqwest_client_builder()
+            .build()
+            .expect("client configuration should be valid")
+    });
+
+pub static REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest_client_builder()
+        .https_only(true)
         .build()
-        .expect("Reqwest Client Building Failed")
+        .expect("client configuration should be valid")
 });
 
 const FETCH_ATTEMPTS: usize = 2;
@@ -150,11 +183,46 @@ const FETCH_ATTEMPTS: usize = 2;
 pub async fn fetch(
     url: &str,
     sha1: Option<&str>,
+    download_meta: Option<&DownloadMeta>,
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
 ) -> crate::Result<Bytes> {
-    fetch_advanced(Method::GET, url, sha1, None, None, None, semaphore, exec)
-        .await
+    fetch_advanced(
+        Method::GET,
+        url,
+        sha1,
+        None,
+        None,
+        download_meta,
+        None,
+        semaphore,
+        exec,
+    )
+    .await
+}
+
+#[tracing::instrument(skip(semaphore))]
+pub async fn fetch_with_client(
+    url: &str,
+    sha1: Option<&str>,
+    download_meta: Option<&DownloadMeta>,
+    semaphore: &FetchSemaphore,
+    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
+    client: &reqwest::Client,
+) -> crate::Result<Bytes> {
+    fetch_advanced_with_client(
+        Method::GET,
+        url,
+        sha1,
+        None,
+        None,
+        download_meta,
+        None,
+        semaphore,
+        exec,
+        client,
+    )
+    .await
 }
 
 #[tracing::instrument(skip(json_body, semaphore))]
@@ -170,14 +238,15 @@ where
     T: DeserializeOwned,
 {
     let result = fetch_advanced(
-        method, url, sha1, json_body, None, None, semaphore, exec,
+        method, url, sha1, json_body, None, None, None, semaphore, exec,
     )
     .await?;
     let value = serde_json::from_slice(&result)?;
     Ok(value)
 }
 
-/// Downloads a file with retry and checksum functionality
+/// Downloads a file with retry and checksum functionality, and a specific
+/// [`reqwest::Client`].
 #[tracing::instrument(skip(json_body, semaphore))]
 #[allow(clippy::too_many_arguments)]
 pub async fn fetch_advanced(
@@ -186,9 +255,40 @@ pub async fn fetch_advanced(
     sha1: Option<&str>,
     json_body: Option<serde_json::Value>,
     header: Option<(&str, &str)>,
+    download_meta: Option<&DownloadMeta>,
     loading_bar: Option<(&LoadingBarId, f64)>,
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
+) -> crate::Result<Bytes> {
+    fetch_advanced_with_client(
+        method,
+        url,
+        sha1,
+        json_body,
+        header,
+        download_meta,
+        loading_bar,
+        semaphore,
+        exec,
+        &INSECURE_REQWEST_CLIENT,
+    )
+    .await
+}
+
+/// Downloads a file with retry and checksum functionality
+#[tracing::instrument(skip(json_body, semaphore))]
+#[allow(clippy::too_many_arguments)]
+pub async fn fetch_advanced_with_client(
+    method: Method,
+    url: &str,
+    sha1: Option<&str>,
+    json_body: Option<serde_json::Value>,
+    header: Option<(&str, &str)>,
+    download_meta: Option<&DownloadMeta>,
+    loading_bar: Option<(&LoadingBarId, f64)>,
+    semaphore: &FetchSemaphore,
+    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
+    client: &reqwest::Client,
 ) -> crate::Result<Bytes> {
     let _permit = semaphore.0.acquire().await?;
 
@@ -205,12 +305,15 @@ pub async fn fetch_advanced(
         None
     };
 
+    let download_meta_header = download_meta
+        .map(|m| (DOWNLOAD_META_HEADER.to_string(), m.to_header_value()));
+
     for attempt in 1..=(FETCH_ATTEMPTS + 1) {
         if is_api_url && GLOBAL_FETCH_FENCE.is_blocked() {
             return Err(ErrorKind::ApiIsDownError.into());
         }
 
-        let mut req = REQWEST_CLIENT.request(method.clone(), url);
+        let mut req = client.request(method.clone(), url);
 
         if let Some(body) = json_body.clone() {
             req = req.json(&body);
@@ -222,6 +325,11 @@ pub async fn fetch_advanced(
 
         if let Some(ref creds) = creds {
             req = req.header("Authorization", &creds.session);
+        }
+
+        if let Some((name, value)) = &download_meta_header {
+            tracing::info!("Sending download analytics: {value}");
+            req = req.header(name.as_str(), value.as_str());
         }
 
         let result = req.send().await;
@@ -318,6 +426,7 @@ pub async fn fetch_advanced(
 pub async fn fetch_mirrors(
     mirrors: &[&str],
     sha1: Option<&str>,
+    download_meta: Option<&DownloadMeta>,
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
 ) -> crate::Result<Bytes> {
@@ -328,7 +437,15 @@ pub async fn fetch_mirrors(
     }
 
     for (index, mirror) in mirrors.iter().enumerate() {
-        let result = fetch(mirror, sha1, semaphore, exec).await;
+        let result = fetch_with_client(
+            mirror,
+            sha1,
+            download_meta,
+            semaphore,
+            exec,
+            &REQWEST_CLIENT,
+        )
+        .await;
 
         if result.is_ok() || (result.is_err() && index == (mirrors.len() - 1)) {
             return result;
@@ -340,18 +457,15 @@ pub async fn fetch_mirrors(
 
 /// Posts a JSON to a URL
 #[tracing::instrument(skip(json_body, semaphore))]
-pub async fn post_json<T>(
+pub async fn post_json(
     url: &str,
     json_body: serde_json::Value,
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
-) -> crate::Result<T>
-where
-    T: DeserializeOwned,
-{
+) -> crate::Result<()> {
     let _permit = semaphore.0.acquire().await?;
 
-    let mut req = REQWEST_CLIENT.post(url).json(&json_body);
+    let mut req = INSECURE_REQWEST_CLIENT.post(url).json(&json_body);
 
     if let Some(creds) =
         crate::state::ModrinthCredentials::get_active(exec).await?
@@ -359,10 +473,8 @@ where
         req = req.header("Authorization", &creds.session);
     }
 
-    let result = req.send().await?.error_for_status()?;
-
-    let value = result.json().await?;
-    Ok(value)
+    req.send().await?.error_for_status()?;
+    Ok(())
 }
 
 pub async fn read_json<T>(
@@ -454,6 +566,34 @@ pub async fn sha1_async(bytes: Bytes) -> crate::Result<String> {
     .await?;
 
     Ok(hash)
+}
+
+pub async fn sha1_file_async(
+    path: impl AsRef<Path>,
+) -> crate::Result<(u64, String)> {
+    let path = path.as_ref();
+    // Local files can be multi-gigabyte .mrpacks, so hash them without materializing bytes.
+    let mut file = File::open(path)
+        .await
+        .map_err(|e| IOError::with_path(e, path))?;
+    let mut hasher = sha1_smol::Sha1::new();
+    let mut size = 0;
+    let mut buffer = vec![0; 262144];
+
+    loop {
+        let bytes_read = file
+            .read(&mut buffer)
+            .await
+            .map_err(|e| IOError::with_path(e, path))?;
+        if bytes_read == 0 {
+            break;
+        }
+
+        hasher.update(&buffer[..bytes_read]);
+        size += bytes_read as u64;
+    }
+
+    Ok((size, hasher.digest().to_string()))
 }
 
 #[cfg(test)]

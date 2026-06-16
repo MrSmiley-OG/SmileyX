@@ -1,103 +1,143 @@
 <template>
 	<div
-		v-if="mode !== 'isolated'"
-		ref="button"
-		class="button-base mt-2 px-3 py-2 bg-button-bg rounded-xl flex items-center gap-2"
-		:class="{ expanded: mode === 'expanded' }"
-		@click="toggleMenu"
+		v-if="accounts.length === 0"
+		class="flex flex-col gap-3 bg-button-bg border border-solid border-surface-5 rounded-xl p-3 mt-2"
 	>
-		<Avatar
-			size="36px"
-			:src="
-				selectedAccount ? avatarUrl : 'https://launcher-files.modrinth.com/assets/steve_head.png'
-			"
-		/>
-		<div class="flex flex-col w-full">
-			<span>
-				<component
-					:is="getAccountType(selectedAccount)"
-					v-if="selectedAccount"
-					class="vector-icon"
-				/>
-				{{ selectedAccount ? selectedAccount.profile.name : 'Select account' }}
-			</span>
-			<span class="text-secondary text-xs">Minecraft account</span>
-		</div>
-		<DropdownIcon class="w-5 h-5 shrink-0" />
+		<span>{{ formatMessage(messages.notSignedIn) }}</span>
+		<ButtonStyled color="brand">
+			<button color="primary" :disabled="loginDisabled" @click="login()">
+				<MicrosoftIcon v-if="!loginDisabled" />
+				<SpinnerIcon v-else class="animate-spin" />
+				{{ formatMessage(messages.signInToMinecraft) }}
+			</button>
+		</ButtonStyled>
+		<!-- BEGIN: This code block modified by AstralRinth -->
+		<ButtonStyled class="w-full">
+			<OverflowMenu class="w-full justify-between text-left" :options="additionalAccountOptions">
+				<span class="inline-flex items-center gap-2">
+					<PlusIcon />
+					{{ formatMessage(messages.addAccount) }}
+				</span>
+				<DropdownIcon class="shrink-0" />
+				<template #add_offline_account>
+					<OfflineIcon />
+					{{ formatMessage(messages.addOfflineAccount) }}
+				</template>
+				<template #add_elyby_account>
+					<ElyByIcon v-if="!elyByLoginDisabled" />
+					<SpinnerIcon v-else class="animate-spin" />
+					{{ formatMessage(messages.addElyByAccount) }}
+				</template>
+			</OverflowMenu>
+		</ButtonStyled>
+		<!-- END: This code block modified by AstralRinth -->
 	</div>
-	<transition name="fade">
-		<Card
-			v-if="showCard || mode === 'isolated'"
-			ref="card"
-			class="account-card"
-			:class="{ expanded: mode === 'expanded', isolated: mode === 'isolated' }"
-		>
-			<div v-if="selectedAccount" class="selected account">
-				<Avatar size="xs" :src="avatarUrl" />
-				<div>
-					<h4>
-						<component :is="getAccountType(selectedAccount)" class="vector-icon" />
-						{{ selectedAccount.profile.name }}
-					</h4>
-					<p>Selected</p>
+	<Accordion
+		v-else
+		class="w-full mt-2 bg-button-bg border border-solid border-surface-5 rounded-xl overflow-clip"
+		button-class="button-base w-full bg-transparent px-3 py-2 border-0 cursor-pointer"
+		:open-by-default="false"
+	>
+		<template #title>
+			<div class="flex gap-2 w-full min-w-0">
+				<Avatar
+					size="36px"
+					:src="
+						selectedAccount
+							? avatarUrl
+							: 'https://launcher-files.modrinth.com/assets/steve_head.png'
+					"
+				/>
+				<div class="flex flex-col items-start w-full min-w-0">
+					<span class="truncate w-full text-left">
+						<span class="inline-flex items-center gap-1 min-w-0">
+							<component
+								:is="getAccountType(selectedAccount)"
+								v-if="selectedAccount && getAccountType(selectedAccount)"
+								class="vector-icon shrink-0"
+							/>
+							<span class="truncate">
+								{{
+									selectedAccount
+										? selectedAccount.profile.name
+										: formatMessage(messages.selectAccount)
+								}}
+							</span>
+						</span>
+					</span>
+					<span class="text-secondary text-xs">{{ formatMessage(messages.minecraftAccount) }}</span>
 				</div>
-				<Button
-					v-tooltip="'Log out'"
-					icon-only
-					color="raised"
-					@click="logout(selectedAccount.profile.id)"
-				>
-					<TrashIcon />
-				</Button>
 			</div>
-			<div v-else class="login-section account">
-				<h4>Not signed in</h4>
-				<Button
-					v-tooltip="'Log via Microsoft'"
-					:disabled="microsoftLoginDisabled"
-					icon-only
-					@click="login()"
-				>
-					<MicrosoftIcon v-if="!microsoftLoginDisabled" />
-					<SpinnerIcon v-else class="animate-spin" />
-				</Button>
-				<Button v-tooltip="'Add offline account'" icon-only @click="showOfflineLoginModal()">
-					<OfflineIcon />
-				</Button>
-				<Button v-tooltip="'Log via Ely.by'" icon-only @click="showElyByLoginModal()">
-					<ElyByIcon v-if="!elyByLoginDisabled" />
-					<SpinnerIcon v-else class="animate-spin" />
-				</Button>
-			</div>
-			<div v-if="displayAccounts.length > 0" class="account-group">
-				<div v-for="account in displayAccounts" :key="account.profile.id" class="account-row">
-					<Button class="option account" @click="setAccount(account)">
-						<Avatar :src="getAccountAvatarUrl(account)" class="icon" />
-						<p class="account-type">
-							<component :is="getAccountType(account)" class="vector-icon" />
-							{{ account.profile.name }}
+		</template>
+		<div class="bg-button-bg pt-1 pb-2 border border-solid border-surface-5">
+			<template v-if="accounts.length > 0">
+				<div v-for="account in accounts" :key="account.profile.id" class="flex gap-1 items-center">
+					<button
+						class="flex items-center flex-shrink flex-grow overflow-clip gap-2 p-2 border-0 bg-transparent cursor-pointer button-base min-w-0"
+						@click="setAccount(account)"
+					>
+						<RadioButtonCheckedIcon
+							v-if="selectedAccount && selectedAccount.profile.id === account.profile.id"
+							class="w-5 h-5 text-brand shrink-0"
+						/>
+						<RadioButtonIcon v-else class="w-5 h-5 text-secondary shrink-0" />
+						<Avatar :src="getAccountAvatarUrl(account)" size="24px" />
+						<p
+							class="m-0 truncate min-w-0 inline-flex items-center gap-1"
+							:class="
+								selectedAccount && selectedAccount.profile.id === account.profile.id
+									? 'text-contrast font-semibold'
+									: 'text-primary'
+							"
+						>
+							<component
+								:is="getAccountType(account)"
+								v-if="getAccountType(account)"
+								class="vector-icon shrink-0"
+							/>
+							<span class="truncate">{{ account.profile.name }}</span>
 						</p>
-					</Button>
-					<Button v-tooltip="'Log out'" icon-only @click="logout(account.profile.id)">
-						<TrashIcon />
-					</Button>
+					</button>
+					<ButtonStyled circular color="red" color-fill="none" hover-color-fill="background">
+						<button
+							v-tooltip="formatMessage(messages.removeAccount)"
+							class="mr-2"
+							@click="logout(account.profile.id)"
+						>
+							<TrashIcon />
+						</button>
+					</ButtonStyled>
 				</div>
+			</template>
+			<div class="flex flex-col gap-2 px-2 pt-2">
+				<ButtonStyled class="w-full" color="brand">
+					<button :disabled="loginDisabled" @click="login()">
+						<MicrosoftIcon v-if="!loginDisabled" />
+						<SpinnerIcon v-else class="animate-spin" />
+						{{ formatMessage(messages.addMicrosoftAccount) }}
+					</button>
+				</ButtonStyled>
+				<ButtonStyled class="w-full">
+					<OverflowMenu class="w-full justify-between text-left" :options="additionalAccountOptions">
+						<span class="inline-flex items-center gap-2">
+							<PlusIcon />
+							{{ formatMessage(messages.addAccount) }}
+						</span>
+						<DropdownIcon class="shrink-0" />
+						<template #add_offline_account>
+							<OfflineIcon />
+							{{ formatMessage(messages.addOfflineAccount) }}
+						</template>
+						<template #add_elyby_account>
+							<ElyByIcon v-if="!elyByLoginDisabled" />
+							<SpinnerIcon v-else class="animate-spin" />
+							{{ formatMessage(messages.addElyByAccount) }}
+						</template>
+					</OverflowMenu>
+				</ButtonStyled>
 			</div>
-			<div v-if="accounts.length > 0" class="login-section account centered">
-				<Button v-tooltip="'Log via Microsoft'" icon-only @click="login()">
-					<MicrosoftIcon v-if="!microsoftLoginDisabled" />
-					<SpinnerIcon v-else class="animate-spin" />
-				</Button>
-				<Button v-tooltip="'Add offline account'" icon-only @click="showOfflineLoginModal()">
-					<OfflineIcon />
-				</Button>
-				<Button v-tooltip="'Log via Ely.by'" icon-only @click="showElyByLoginModal()">
-					<ElyByIcon v-if="!elyByLoginDisabled" />
-					<SpinnerIcon v-else class="animate-spin" />
-				</Button>
-			</div>
-		</Card>
-	</transition>
+		</div>
+	</Accordion>
 	<ModalWrapper ref="addElyByModal" class="modal" header="Authenticate with Ely.by">
 		<ModalWrapper
 			ref="requestElyByTwoFactorCodeModal"
@@ -105,49 +145,37 @@
 			header="Ely.by requested 2FA code for authentication"
 		>
 			<div class="flex flex-col gap-4 px-6 py-5">
-				<label class="label">Enter your 2FA code</label>
+				<label class="label form-label">Enter your 2FA code</label>
 				<input
 					v-model="elyByTwoFactorCode"
 					type="text"
 					placeholder="Your 2FA code here..."
-					class="input"
+					class="input soft-input"
 				/>
 				<div class="mt-6 ml-auto">
-					<Button
-						:disabled="elyByLoginDisabled"
-						icon-only
-						color="primary"
-						class="continue-button"
-						@click="addElyByProfile()"
-					>
+					<Button color="primary" :disabled="elyByLoginDisabled" @click="addElyByProfile()">
 						Continue
 					</Button>
 				</div>
 			</div>
 		</ModalWrapper>
 		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="label">Enter your player name or email (preferred)</label>
+			<label class="label form-label">Enter your player name or email (preferred)</label>
 			<input
-				v-model="elyByLogin"
+				v-model="elyByLoginValue"
 				type="text"
 				placeholder="Your player name or email here..."
-				class="input"
+				class="input soft-input"
 			/>
-			<label class="label">Enter your password</label>
+			<label class="label form-label">Enter your password</label>
 			<input
 				v-model="elyByPassword"
 				type="password"
 				placeholder="Your password here..."
-				class="input"
+				class="input soft-input"
 			/>
 			<div class="mt-6 ml-auto">
-				<Button
-					:disabled="elyByLoginDisabled"
-					icon-only
-					color="primary"
-					class="continue-button"
-					@click="addElyByProfile()"
-				>
+				<Button color="primary" :disabled="elyByLoginDisabled" @click="addElyByProfile()">
 					Login
 				</Button>
 			</div>
@@ -155,17 +183,15 @@
 	</ModalWrapper>
 	<ModalWrapper ref="addOfflineModal" class="modal" header="Add new offline account">
 		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="label">Enter your player name</label>
+			<label class="label form-label">Enter your player name</label>
 			<input
 				v-model="offlinePlayerName"
 				type="text"
 				placeholder="Your player name here..."
-				class="input"
+				class="input soft-input"
 			/>
 			<div class="mt-6 ml-auto">
-				<Button icon-only color="primary" class="continue-button" @click="addOfflineProfile()">
-					Login
-				</Button>
+				<Button color="primary" @click="addOfflineProfile()">Login</Button>
 			</div>
 		</div>
 	</ModalWrapper>
@@ -178,11 +204,8 @@
 			<label class="text-base font-medium text-red-700">
 				An error occurred while logging in.
 			</label>
-
 			<div class="mt-6 ml-auto">
-				<Button color="primary" class="retry-button" @click="retryAddElyByProfile">
-					Try again
-				</Button>
+				<Button color="primary" @click="retryAddElyByProfile">Try again</Button>
 			</div>
 		</div>
 	</ModalWrapper>
@@ -195,16 +218,12 @@
 			<label class="text-base font-medium text-red-700">
 				An error occurred while adding the Ely.by account. Please follow the instructions below.
 			</label>
-
 			<ul class="list-disc list-inside text-sm space-y-1">
 				<li>Check that you have entered the correct player name or email.</li>
 				<li>Check that you have entered the correct password.</li>
 			</ul>
-
 			<div class="mt-6 ml-auto">
-				<Button color="primary" class="retry-button" @click="retryAddElyByProfile">
-					Try again
-				</Button>
+				<Button color="primary" @click="retryAddElyByProfile">Try again</Button>
 			</div>
 		</div>
 	</ModalWrapper>
@@ -217,7 +236,6 @@
 			<label class="text-base font-medium text-red-700">
 				An error occurred while adding the offline account. Please follow the instructions below.
 			</label>
-
 			<ul class="list-disc list-inside text-sm space-y-1">
 				<li>Check that you have entered the correct player name.</li>
 				<li>
@@ -226,11 +244,8 @@
 				</li>
 				<li>Make sure your name meets the format requirement `{{ nameExp }}`</li>
 			</ul>
-
 			<div class="mt-6 ml-auto">
-				<Button color="primary" class="retry-button" @click="retryAddOfflineProfile">
-					Try again
-				</Button>
+				<Button color="primary" @click="retryAddOfflineProfile">Try again</Button>
 			</div>
 		</div>
 	</ModalWrapper>
@@ -241,7 +256,7 @@
 	</ModalWrapper>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
 import {
@@ -256,6 +271,7 @@ import {
 } from '@/helpers/auth'
 import { process_listener } from '@/helpers/events'
 import { getPlayerHeadUrl } from '@/helpers/rendering/batch-skin-renderer.ts'
+import type { Skin } from '@/helpers/skins'
 import { get_available_skins } from '@/helpers/skins'
 import { handleSevereError } from '@/store/error.js'
 import {
@@ -263,77 +279,109 @@ import {
 	ElyByIcon,
 	MicrosoftIcon,
 	OfflineIcon,
+	RadioButtonCheckedIcon,
+	RadioButtonIcon,
 	SpinnerIcon,
 	TrashIcon,
 } from '@modrinth/assets'
-import { Avatar, Button, Card, injectNotificationManager } from '@modrinth/ui'
-import { computed, onBeforeUnmount, onMounted, onUnmounted, ref } from 'vue'
+import {
+	Accordion,
+	Avatar,
+	Button,
+	ButtonStyled,
+	defineMessages,
+	injectNotificationManager,
+	OverflowMenu,
+	useVIntl,
+} from '@modrinth/ui'
+import type { Ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 
+const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 
-defineProps({
-	mode: {
-		type: String,
-		required: true,
-		default: 'normal',
-	},
-})
+const emit = defineEmits<{
+	change: []
+}>()
 
-const emit = defineEmits(['change'])
+type MinecraftCredential = {
+	account_type?: 'microsoft' | 'pirate' | 'elyby' | string
+	profile: {
+		id: string
+		name: string
+	}
+}
 
-const accounts = ref({})
-const microsoftLoginDisabled = ref(false)
-const elyByLoginDisabled = ref(false)
-const defaultUser = ref()
+type ModalHandle = {
+	hide: () => void
+	show: () => void
+}
 
-// This code is modified by AstralRinth
 const clientToken = 'astralrinth'
-const addOfflineModal = ref(null)
-const addElyByModal = ref(null)
-const requestElyByTwoFactorCodeModal = ref(null)
-const authenticationElyByErrorModal = ref(null)
-const inputElyByErrorModal = ref(null)
-const inputOfflineErrorModal = ref(null)
-const unexpectedErrorModal = ref(null)
-const offlinePlayerName = ref('')
-const elyByLogin = ref('')
-const elyByPassword = ref('')
-const elyByTwoFactorCode = ref('')
 const minOfflinePlayerNameLength = 3
 const maxOfflinePlayerNameLength = 20
 const nameExp = 'a-zA-Z0-9_'
 const nameRegex = new RegExp(`^[${nameExp}]+$`)
 
-// This code is modified by AstralRinth
-function getAccountType(account) {
-	switch (account.account_type) {
+const accounts: Ref<MinecraftCredential[]> = ref([])
+const loginDisabled = ref(false)
+const elyByLoginDisabled = ref(false)
+const defaultUser = ref<string | undefined>()
+const equippedSkin = ref<Skin | null>(null)
+const headUrlCache = ref(new Map<string, string>())
+
+const addOfflineModal = ref<ModalHandle | null>(null)
+const addElyByModal = ref<ModalHandle | null>(null)
+const requestElyByTwoFactorCodeModal = ref<ModalHandle | null>(null)
+const authenticationElyByErrorModal = ref<ModalHandle | null>(null)
+const inputElyByErrorModal = ref<ModalHandle | null>(null)
+const inputOfflineErrorModal = ref<ModalHandle | null>(null)
+const unexpectedErrorModal = ref<ModalHandle | null>(null)
+
+const offlinePlayerName = ref('')
+const elyByLoginValue = ref('')
+const elyByPassword = ref('')
+const elyByTwoFactorCode = ref('')
+
+function getAccountType(account?: MinecraftCredential) {
+	switch (account?.account_type) {
 		case 'microsoft':
 			return MicrosoftIcon
 		case 'pirate':
 			return OfflineIcon
 		case 'elyby':
 			return ElyByIcon
+		default:
+			return null
 	}
 }
 
-// This code is modified by AstralRinth
 function showOfflineLoginModal() {
 	addOfflineModal.value?.show()
 }
 
-// This code is modified by AstralRinth
 function showElyByLoginModal() {
 	addElyByModal.value?.show()
 }
 
-// This code is modified by AstralRinth
+const additionalAccountOptions = computed(() => [
+	{
+		id: 'add_offline_account',
+		action: showOfflineLoginModal,
+	},
+	{
+		id: 'add_elyby_account',
+		action: showElyByLoginModal,
+		disabled: elyByLoginDisabled.value,
+	},
+])
+
 function retryAddOfflineProfile() {
 	inputOfflineErrorModal.value?.hide()
 	clearOfflineFields()
 	showOfflineLoginModal()
 }
 
-// This code is modified by AstralRinth
 function retryAddElyByProfile() {
 	authenticationElyByErrorModal.value?.hide()
 	inputElyByErrorModal.value?.hide()
@@ -342,19 +390,16 @@ function retryAddElyByProfile() {
 	showElyByLoginModal()
 }
 
-// This code is modified by AstralRinth
 function clearElyByFields() {
-	elyByLogin.value = ''
+	elyByLoginValue.value = ''
 	elyByPassword.value = ''
 	elyByTwoFactorCode.value = ''
 }
 
-// This code is modified by AstralRinth
 function clearOfflineFields() {
 	offlinePlayerName.value = ''
 }
 
-// This code is modified by AstralRinth
 async function addOfflineProfile() {
 	const name = offlinePlayerName.value.trim()
 	const isValidName =
@@ -371,7 +416,6 @@ async function addOfflineProfile() {
 
 	try {
 		const result = await offline_login(name)
-
 		addOfflineModal.value?.hide()
 
 		if (result) {
@@ -388,36 +432,33 @@ async function addOfflineProfile() {
 	}
 }
 
-// This code is modified by AstralRinth
 async function addElyByProfile() {
 	elyByLoginDisabled.value = true
-	if (!elyByLogin.value || !elyByPassword.value) {
+
+	if (!elyByLoginValue.value || !elyByPassword.value) {
 		addElyByModal.value?.hide()
 		inputElyByErrorModal.value?.show()
 		clearElyByFields()
+		elyByLoginDisabled.value = false
 		return
 	}
 
-	// Parse ely.by credential fields
-	const login = elyByLogin.value.trim()
+	const login = elyByLoginValue.value.trim()
 	let password = elyByPassword.value.trim()
 	const twoFactorCode = elyByTwoFactorCode.value.trim()
+
 	if (password && twoFactorCode) {
 		password = `${password}:${twoFactorCode}`
 	}
 
 	try {
-		const raw_result = await elyby_auth_authenticate(login, password, clientToken)
+		const rawResult = await elyby_auth_authenticate(login, password, clientToken)
+		const jsonData = JSON.parse(rawResult)
 
-		const json_data = JSON.parse(raw_result)
-
-		console.log(json_data?.error)
-		console.log(json_data?.errorMessage)
-
-		if (!json_data.accessToken) {
+		if (!jsonData.accessToken) {
 			if (
-				json_data.error === 'ForbiddenOperationException' &&
-				json_data.errorMessage?.includes('two factor')
+				jsonData.error === 'ForbiddenOperationException' &&
+				jsonData.errorMessage?.includes('two factor')
 			) {
 				requestElyByTwoFactorCodeModal.value?.show()
 				return
@@ -429,51 +470,51 @@ async function addElyByProfile() {
 			return
 		}
 
-		const accessToken = json_data.accessToken
-		const selectedProfileId = convertRawStringToUUIDv4(json_data.selectedProfile.id)
-		const selectedProfileName = json_data.selectedProfile.name
-
+		const accessToken = jsonData.accessToken
+		const selectedProfileId = convertRawStringToUUIDv4(jsonData.selectedProfile.id)
+		const selectedProfileName = jsonData.selectedProfile.name
 		const result = await elyby_login(selectedProfileId, selectedProfileName, accessToken)
 
 		addElyByModal.value?.hide()
 		requestElyByTwoFactorCodeModal.value?.hide()
-
 		clearElyByFields()
 
 		await setAccount(result)
 		await refreshValues()
-	} catch (err) {
-		handleError(err)
+	} catch (error) {
+		handleError(error)
 		unexpectedErrorModal.value?.show()
 	} finally {
 		elyByLoginDisabled.value = false
 	}
 }
 
-// This code is modified by AstralRinth
-function convertRawStringToUUIDv4(rawId) {
+function convertRawStringToUUIDv4(rawId: string) {
 	if (rawId.length !== 32) {
 		console.warn('Invalid UUID string:', rawId)
 		return rawId
 	}
+
 	return `${rawId.slice(0, 8)}-${rawId.slice(8, 12)}-${rawId.slice(12, 16)}-${rawId.slice(16, 20)}-${rawId.slice(20)}`
 }
 
-const equippedSkin = ref(null)
-const headUrlCache = ref(new Map())
-
 async function refreshValues() {
 	defaultUser.value = await get_default_user().catch(handleError)
-	accounts.value = await users().catch(handleError)
+	const userList = await users().catch(handleError)
+	accounts.value = Array.isArray(userList) ? [...userList] : []
+	accounts.value.sort((a, b) => (a.profile?.name ?? '').localeCompare(b.profile?.name ?? ''))
 
 	try {
 		const skins = await get_available_skins()
-		equippedSkin.value = skins.find((skin) => skin.is_equipped)
+		equippedSkin.value = skins.find((skin) => skin.is_equipped) ?? null
 
 		if (equippedSkin.value) {
 			try {
 				const headUrl = await getPlayerHeadUrl(equippedSkin.value)
-				headUrlCache.value.set(equippedSkin.value.texture_key, headUrl)
+				headUrlCache.value = new Map(headUrlCache.value).set(
+					equippedSkin.value.texture_key,
+					headUrl,
+				)
 			} catch (error) {
 				console.warn('Failed to get head render for equipped skin:', error)
 			}
@@ -483,19 +524,32 @@ async function refreshValues() {
 	}
 }
 
-function setLoginDisabled(value) {
-	microsoftLoginDisabled.value = value
+async function setEquippedSkin(skin: Skin) {
+	equippedSkin.value = skin
+
+	try {
+		const headUrl = await getPlayerHeadUrl(skin)
+		headUrlCache.value = new Map(headUrlCache.value).set(skin.texture_key, headUrl)
+	} catch (error) {
+		console.warn('Failed to get head render for equipped skin:', error)
+	}
+}
+
+function setLoginDisabled(value: boolean) {
+	loginDisabled.value = value
 }
 
 defineExpose({
 	refreshValues,
+	setEquippedSkin,
 	setLoginDisabled,
-	microsoftLoginDisabled,
+	loginDisabled,
 })
+
 await refreshValues()
 
-const displayAccounts = computed(() =>
-	accounts.value.filter((account) => defaultUser.value !== account.profile.id),
+const selectedAccount = computed(() =>
+	accounts.value.find((account) => account.profile.id === defaultUser.value),
 )
 
 const avatarUrl = computed(() => {
@@ -504,15 +558,18 @@ const avatarUrl = computed(() => {
 		if (cachedUrl) {
 			return cachedUrl
 		}
+
 		return `https://mc-heads.net/avatar/${equippedSkin.value.texture_key}/128`
 	}
+
 	if (selectedAccount.value?.profile?.id) {
 		return `https://mc-heads.net/avatar/${selectedAccount.value.profile.id}/128`
 	}
+
 	return 'https://launcher-files.modrinth.com/assets/steve_head.png'
 })
 
-function getAccountAvatarUrl(account) {
+function getAccountAvatarUrl(account: MinecraftCredential) {
 	if (
 		account.profile.id === selectedAccount.value?.profile?.id &&
 		equippedSkin.value?.texture_key
@@ -522,65 +579,40 @@ function getAccountAvatarUrl(account) {
 			return cachedUrl
 		}
 	}
+
 	return `https://mc-heads.net/avatar/${account.profile.id}/128`
 }
 
-const selectedAccount = computed(() =>
-	accounts.value.find((account) => account.profile.id === defaultUser.value),
-)
-
-async function setAccount(account) {
+async function setAccount(account: MinecraftCredential) {
 	defaultUser.value = account.profile.id
 	await set_default_user(account.profile.id).catch(handleError)
+	await refreshValues()
 	emit('change')
 }
 
 async function login() {
-	microsoftLoginDisabled.value = true
+	loginDisabled.value = true
 	const loggedIn = await login_flow().catch(handleSevereError)
 
 	if (loggedIn) {
 		await setAccount(loggedIn)
-		await refreshValues()
 	}
 
 	trackEvent('AccountLogIn')
-	microsoftLoginDisabled.value = false
+	loginDisabled.value = false
 }
 
-const logout = async (id) => {
+async function logout(id: string) {
 	await remove_user(id).catch(handleError)
 	await refreshValues()
+
 	if (!selectedAccount.value && accounts.value.length > 0) {
 		await setAccount(accounts.value[0])
-		await refreshValues()
 	} else {
 		emit('change')
 	}
+
 	trackEvent('AccountLogOut')
-}
-
-const showCard = ref(false)
-const card = ref(null)
-const button = ref(null)
-const handleClickOutside = (event) => {
-	const elements = document.elementsFromPoint(event.clientX, event.clientY)
-	if (
-		card.value &&
-		card.value.$el !== event.target &&
-		!elements.includes(card.value.$el) &&
-		!button.value.contains(event.target)
-	) {
-		toggleMenu(false)
-	}
-}
-
-function toggleMenu(override = true) {
-	if (showCard.value || !override) {
-		showCard.value = false
-	} else {
-		showCard.value = true
-	}
 }
 
 const unlisten = await process_listener(async (e) => {
@@ -589,190 +621,60 @@ const unlisten = await process_listener(async (e) => {
 	}
 })
 
-onMounted(() => {
-	window.addEventListener('click', handleClickOutside)
-})
-
-onBeforeUnmount(() => {
-	window.removeEventListener('click', handleClickOutside)
-})
-
 onUnmounted(() => {
 	unlisten()
+})
+
+const messages = defineMessages({
+	notSignedIn: {
+		id: 'minecraft-account.not-signed-in',
+		defaultMessage: 'Not signed in',
+	},
+	addAccount: {
+		id: 'minecraft-account.add-account',
+		defaultMessage: 'Add account',
+	},
+	addMicrosoftAccount: {
+		id: 'minecraft-account.add-microsoft-account',
+		defaultMessage: 'Add Microsoft account',
+	},
+	addOfflineAccount: {
+		id: 'astralrinth.app.minecraft-account.add-offline-account',
+		defaultMessage: 'Add offline account',
+	},
+	addElyByAccount: {
+		id: 'astralrinth.app.minecraft-account.add-elyby-account',
+		defaultMessage: 'Add Ely.by account',
+	},
+	removeAccount: {
+		id: 'minecraft-account.remove-account',
+		defaultMessage: 'Remove account',
+	},
+	selectAccount: {
+		id: 'minecraft-account.select-account',
+		defaultMessage: 'Select account',
+	},
+	minecraftAccount: {
+		id: 'minecraft-account.label',
+		defaultMessage: 'Minecraft account',
+	},
+	signInToMinecraft: {
+		id: 'minecraft-account.sign-in',
+		defaultMessage: 'Sign in to Minecraft',
+	},
 })
 </script>
 
 <style scoped lang="scss">
-.selected {
-	background: var(--color-brand-highlight);
-	border-radius: var(--radius-lg);
-	color: var(--color-contrast);
-	gap: 1rem;
-}
-
-.login-section {
-	background: var(--color-bg);
-	border-radius: var(--radius-lg);
-	gap: 1rem;
-}
+@import '../../../../../packages/assets/styles/astralrinth/soft-inputs.scss';
 
 .vector-icon {
-	width: 12px;
-	height: 12px;
+	width: 0.875rem;
+	height: 0.875rem;
 }
 
-.account {
-	width: max-content;
-	display: flex;
-	align-items: center;
-	text-align: left;
-	padding: 0.5rem 1rem;
-
-	h4,
-	p {
-		margin: 0;
-	}
-}
-
-.account-card {
-	position: fixed;
-	display: flex;
-	flex-direction: column;
-	margin-top: 0.5rem;
-	right: 2rem;
-	z-index: 11;
-	gap: 0.5rem;
-	padding: 1rem;
-	border: 1px solid var(--color-divider);
-	width: max-content;
-	user-select: none;
-	-ms-user-select: none;
-	-webkit-user-select: none;
-	max-height: calc(100vh - 300px);
-	overflow-y: auto;
-
-	&::-webkit-scrollbar-track {
-		border-top-right-radius: 1rem;
-		border-bottom-right-radius: 1rem;
-	}
-
-	&::-webkit-scrollbar {
-		border-top-right-radius: 1rem;
-		border-bottom-right-radius: 1rem;
-	}
-
-	&.hidden {
-		display: none;
-	}
-
-	&.expanded {
-		left: 13.5rem;
-	}
-
-	&.isolated {
-		position: relative;
-		left: 0;
-		top: 0;
-	}
-}
-
-.accounts-title {
-	font-size: 1.2rem;
-	font-weight: bolder;
-}
-
-.centered {
-	display: flex;
-	gap: 1rem;
-	margin: auto;
-}
-
-.account-group {
-	width: 100%;
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-}
-
-.option {
-	width: calc(100% - 2.25rem);
-	background: var(--color-raised-bg);
-	color: var(--color-base);
-	box-shadow: none;
-
-	img {
-		margin-right: 0.5rem;
-	}
-}
-
-.icon {
-	--size: 1.5rem !important;
-}
-
-.account-row {
-	display: flex;
-	flex-direction: row;
-	gap: 0.5rem;
-	vertical-align: center;
-	justify-content: space-between;
-	padding-right: 1rem;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-	transition:
-		opacity 0.25s ease,
-		translate 0.25s ease,
-		scale 0.25s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-	opacity: 0;
-	translate: 0 -2rem;
-	scale: 0.9;
-}
-
-.avatar-button {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	color: var(--color-base);
-	background-color: var(--color-button-bg);
-	border-radius: var(--radius-md);
-	width: 100%;
-	padding: 0.5rem 0.75rem;
-	text-align: left;
-
-	&.expanded {
-		border: 1px solid var(--color-divider);
-		padding: 1rem;
-	}
-}
-
-.avatar-text {
-	margin: auto 0 auto 0.25rem;
-	display: flex;
-	flex-direction: column;
-}
-
-.text {
-	width: 6rem;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.accounts-text {
-	display: flex;
-	align-items: center;
-	gap: 0.25rem;
-	margin: 0;
-}
-
-.qr-code {
-	background-color: white !important;
-	border-radius: var(--radius-md);
+.modal {
+	position: absolute;
 }
 
 .modal-body {
@@ -781,63 +683,5 @@ onUnmounted(() => {
 	gap: var(--gap-lg);
 	align-items: center;
 	padding: var(--gap-xl);
-
-	.modal-text {
-		display: flex;
-		flex-direction: column;
-		gap: var(--gap-sm);
-		width: 100%;
-
-		h2,
-		p {
-			margin: 0;
-		}
-
-		.code-text {
-			display: flex;
-			flex-direction: row;
-			gap: var(--gap-xs);
-			align-items: center;
-
-			.code {
-				background-color: var(--color-bg);
-				border-radius: var(--radius-md);
-				border: solid 1px var(--color-button-bg);
-				font-family: var(--mono-font);
-				letter-spacing: var(--gap-md);
-				color: var(--color-contrast);
-				font-size: 2rem;
-				font-weight: bold;
-				padding: var(--gap-sm) 0 var(--gap-sm) var(--gap-md);
-			}
-
-			.btn {
-				width: 2.5rem;
-				height: 2.5rem;
-			}
-		}
-	}
-}
-
-.button-row {
-	display: flex;
-	flex-direction: row;
-}
-
-.modal {
-	position: absolute;
-}
-
-.code {
-	color: var(--color-brand);
-	padding: 0.05rem 0.1rem;
-	// row not column
-	display: flex;
-
-	.card {
-		background: var(--color-base);
-		color: var(--color-contrast);
-		padding: 0.5rem 1rem;
-	}
 }
 </style>

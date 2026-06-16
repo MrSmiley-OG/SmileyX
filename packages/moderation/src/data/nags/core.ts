@@ -1,4 +1,4 @@
-import { defineMessage, useVIntl } from '@modrinth/ui'
+import { defineMessage, formatProjectTypeSentence, useVIntl } from '@modrinth/ui'
 
 import type { Nag, NagContext } from '../../types/nags'
 
@@ -23,7 +23,7 @@ export const coreNags: Nag[] = [
 				id: 'nags.moderation.title',
 				defaultMessage: 'Visit moderation thread',
 			}),
-			shouldShow: (context: NagContext) => context.currentRoute !== 'type-id-moderation',
+			shouldShow: (context: NagContext) => context.currentRoute !== 'type-project-moderation',
 		},
 	},
 	{
@@ -37,14 +37,15 @@ export const coreNags: Nag[] = [
 			defaultMessage: 'At least one version is required for a project to be submitted for review.',
 		}),
 		status: 'required',
-		shouldShow: (context: NagContext) => context.versions.length < 1,
+		shouldShow: (context: NagContext) =>
+			context.projectV3?.versions?.length < 1 && !context.projectV3?.minecraft_server,
 		link: {
 			path: 'settings/versions',
 			title: defineMessage({
 				id: 'nags.versions.title',
 				defaultMessage: 'Visit versions page',
 			}),
-			shouldShow: (context: NagContext) => context.currentRoute !== 'type-id-versions',
+			shouldShow: (context: NagContext) => context.currentRoute !== 'type-project-versions',
 		},
 	},
 	{
@@ -66,7 +67,8 @@ export const coreNags: Nag[] = [
 				id: 'nags.settings.description.title',
 				defaultMessage: 'Visit description settings',
 			}),
-			shouldShow: (context: NagContext) => context.currentRoute !== 'type-id-settings-description',
+			shouldShow: (context: NagContext) =>
+				context.currentRoute !== 'type-project-settings-description',
 		},
 	},
 	{
@@ -88,7 +90,7 @@ export const coreNags: Nag[] = [
 				id: 'nags.settings.title',
 				defaultMessage: 'Visit general settings',
 			}),
-			shouldShow: (context: NagContext) => context.currentRoute !== 'type-id-settings',
+			shouldShow: (context: NagContext) => context.currentRoute !== 'type-project-settings',
 		},
 	},
 	{
@@ -104,10 +106,19 @@ export const coreNags: Nag[] = [
 				defineMessage({
 					id: 'nags.upload-gallery-image.description',
 					defaultMessage:
-						'At least one gallery image is required to showcase the content of your {type, select, resourcepack {resource pack, except for audio or localization packs. If this describes your pack, please select the appropriate tag} shader {shader} other {project}}.',
+						'At least one gallery image is required to showcase the content of your {type}.',
 				}),
 				{
-					type: context.project.project_type,
+					type:
+						context.project.project_type === 'resourcepack'
+							? formatMessage(
+									defineMessage({
+										id: 'nags.upload-gallery-image.resourcepack-type',
+										defaultMessage:
+											'resource pack, except for audio or localization packs. If this describes your pack, please select the appropriate tag',
+									}),
+								)
+							: formatProjectTypeSentence(formatMessage, context.project.project_type),
 				},
 			)
 		},
@@ -131,7 +142,7 @@ export const coreNags: Nag[] = [
 				id: 'nags.gallery.title',
 				defaultMessage: 'Visit gallery page',
 			}),
-			shouldShow: (context: NagContext) => context.currentRoute !== 'type-id-gallery',
+			shouldShow: (context: NagContext) => context.currentRoute !== 'type-project-gallery',
 		},
 	},
 	{
@@ -147,6 +158,7 @@ export const coreNags: Nag[] = [
 		}),
 		status: 'suggestion',
 		shouldShow: (context: NagContext) => {
+			if (context.projectV3?.minecraft_server) return false
 			const featuredGalleryImage = context.project.gallery?.find((img) => img.featured)
 			return context.project?.gallery?.length === 0 || !featuredGalleryImage
 		},
@@ -156,59 +168,7 @@ export const coreNags: Nag[] = [
 				id: 'nags.gallery.title',
 				defaultMessage: 'Visit gallery page',
 			}),
-			shouldShow: (context: NagContext) => context.currentRoute !== 'type-id-gallery',
-		},
-	},
-	{
-		id: 'select-tags',
-		title: defineMessage({
-			id: 'nags.select-tags.title',
-			defaultMessage: 'Select tags',
-		}),
-		description: defineMessage({
-			id: 'nags.select-tags.description',
-			defaultMessage:
-				'Select the tags that correctly apply to your project to help the right users find it.',
-		}),
-		status: 'suggestion',
-		shouldShow: (context: NagContext) =>
-			context.project.versions.length > 0 && context.project.categories.length < 1,
-		link: {
-			path: 'settings/tags',
-			title: defineMessage({
-				id: 'nags.settings.tags.title',
-				defaultMessage: 'Visit tag settings',
-			}),
-			shouldShow: (context: NagContext) => context.currentRoute !== 'type-id-settings-tags',
-		},
-	},
-	{
-		id: 'add-links',
-		title: defineMessage({
-			id: 'nags.add-links.title',
-			defaultMessage: 'Add external links',
-		}),
-		description: defineMessage({
-			id: 'nags.add-links.description',
-			defaultMessage:
-				'Add any relevant links targeted outside of Modrinth, such as source code, an issue tracker, or a Discord invite.',
-		}),
-		status: 'suggestion',
-		shouldShow: (context: NagContext) =>
-			!(
-				context.project.issues_url ||
-				context.project.source_url ||
-				context.project.wiki_url ||
-				context.project.discord_url ||
-				context.project.donation_urls?.length
-			),
-		link: {
-			path: 'settings/links',
-			title: defineMessage({
-				id: 'nags.settings.links.title',
-				defaultMessage: 'Visit links settings',
-			}),
-			shouldShow: (context: NagContext) => context.currentRoute !== 'type-id-settings-links',
+			shouldShow: (context: NagContext) => context.currentRoute !== 'type-project-gallery',
 		},
 	},
 	{
@@ -223,23 +183,23 @@ export const coreNags: Nag[] = [
 			return formatMessage(
 				defineMessage({
 					id: 'nags.select-license.description',
-					defaultMessage:
-						'Select the license your {type, select, mod {mod} modpack {modpack} resourcepack {resource pack} shader {shader} plugin {plugin} datapack {data pack} other {project}} is distributed under.',
+					defaultMessage: 'Select the license your {type} is distributed under.',
 				}),
 				{
-					type: context.project.project_type,
+					type: formatProjectTypeSentence(formatMessage, context.project.project_type),
 				},
 			)
 		},
 		status: 'required',
-		shouldShow: (context: NagContext) => context.project.license.id === 'LicenseRef-Unknown',
+		shouldShow: (context: NagContext) =>
+			context.project.license.id === 'LicenseRef-Unknown' && !context.projectV3?.minecraft_server,
 		link: {
 			path: 'settings/license',
 			title: defineMessage({
 				id: 'nags.settings.license.title',
 				defaultMessage: 'Visit license settings',
 			}),
-			shouldShow: (context: NagContext) => context.currentRoute !== 'type-id-settings-license',
+			shouldShow: (context: NagContext) => context.currentRoute !== 'type-project-settings-license',
 		},
 	},
 ]

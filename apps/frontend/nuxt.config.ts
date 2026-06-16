@@ -1,10 +1,15 @@
-import { GenericModrinthClient, type Labrinth } from '@modrinth/api-client'
 import serverSidedVue from '@vitejs/plugin-vue'
 import fs from 'fs/promises'
 import { defineNuxtConfig } from 'nuxt/config'
+import { fileURLToPath } from 'url'
 import svgLoader from 'vite-svg-loader'
 
+import { GenericModrinthClient, type Labrinth } from '../../packages/api-client/src/index.ts'
+
 const STAGING_API_URL = 'https://staging-api.modrinth.com/v2/'
+const API_CLIENT_SOURCE = fileURLToPath(
+	new URL('../../packages/api-client/src/index.ts', import.meta.url),
+)
 
 const preloadedFonts = [
 	'inter/Inter-Regular.woff2',
@@ -24,6 +29,9 @@ const STAGING_MODRINTH_URL = 'https://staging.modrinth.com'
 
 export default defineNuxtConfig({
 	srcDir: 'src/',
+	alias: {
+		'@modrinth/api-client': API_CLIENT_SOURCE,
+	},
 	app: {
 		head: {
 			htmlAttrs: {
@@ -67,7 +75,10 @@ export default defineNuxtConfig({
 		},
 		ssr: {
 			// https://github.com/Akryum/floating-vue/issues/809#issuecomment-1002996240
-			noExternal: ['v-tooltip'],
+			noExternal: ['floating-vue', '@floating-ui/core', '@floating-ui/dom'],
+		},
+		optimizeDeps: {
+			include: ['vue-router', 'floating-vue', '@floating-ui/dom'],
 		},
 		define: {
 			global: {},
@@ -79,6 +90,9 @@ export default defineNuxtConfig({
 		},
 		cacheDir: '../../node_modules/.vite/apps/knossos',
 		resolve: {
+			alias: {
+				'@modrinth/api-client': API_CLIENT_SOURCE,
+			},
 			dedupe: ['vue'],
 		},
 		plugins: [
@@ -90,6 +104,9 @@ export default defineNuxtConfig({
 							params: {
 								overrides: {
 									removeViewBox: false,
+									cleanupIds: {
+										minify: false,
+									},
 								},
 							},
 						},
@@ -180,7 +197,7 @@ export default defineNuxtConfig({
 			console.log('Tags generated!')
 
 			const robotsContent =
-				getDomain() === PROD_MODRINTH_URL
+				getDomain() === PROD_MODRINTH_URL && process.env.PREVIEW !== 'true'
 					? 'User-agent: *\nDisallow: /_internal/'
 					: 'User-agent: *\nDisallow: /'
 
@@ -193,11 +210,21 @@ export default defineNuxtConfig({
 		// @ts-ignore
 		rateLimitKey: process.env.RATE_LIMIT_IGNORE_KEY ?? globalThis.RATE_LIMIT_IGNORE_KEY,
 		pyroBaseUrl: process.env.PYRO_BASE_URL,
+		intercomIdentitySecret:
+			process.env.INTERCOM_IDENTITY_SECRET ??
+			// @ts-ignore
+			globalThis.INTERCOM_IDENTITY_SECRET,
 		public: {
 			apiBaseUrl: getApiUrl(),
 			pyroBaseUrl: process.env.PYRO_BASE_URL,
 			siteUrl: getDomain(),
+			intercomAppId:
+				process.env.INTERCOM_APP_ID ||
+				// @ts-ignore
+				globalThis.INTERCOM_APP_ID ||
+				'ykeritl9',
 			production: isProduction(),
+			cookieSecure: isProduction(),
 			buildEnv: process.env.BUILD_ENV,
 			preview: process.env.PREVIEW === 'true',
 			featureFlagOverrides: getFeatureFlagOverrides(),
@@ -235,7 +262,6 @@ export default defineNuxtConfig({
 		},
 	},
 	modules: [
-		'@pinia/nuxt',
 		'floating-vue/nuxt',
 		// Sentry causes rollup-plugin-inject errors in dev, only enable in production
 		...(isProduction() ? ['@sentry/nuxt/module'] : []),

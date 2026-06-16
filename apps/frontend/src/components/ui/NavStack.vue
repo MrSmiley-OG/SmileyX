@@ -1,7 +1,8 @@
 <template>
 	<nav :aria-label="ariaLabel" class="w-full">
 		<ul
-			class="card-shadow m-0 flex list-none flex-col items-start gap-1.5 rounded-2xl bg-bg-raised p-4"
+			class="card-shadow m-0 flex list-none flex-col items-start gap-1.5 rounded-2xl border border-solid border-surface-4 bg-surface-3 p-4"
+			:class="{ 'pt-3': filteredItems?.[0]?.type === 'heading' }"
 		>
 			<slot v-if="hasSlotContent" />
 
@@ -19,7 +20,7 @@
 					<NuxtLink
 						v-else-if="item.link ?? item.to"
 						:to="(item.link ?? item.to) as string"
-						class="nav-item inline-flex w-full cursor-pointer items-center gap-2 text-nowrap rounded-xl border-none bg-transparent px-4 py-2.5 text-left text-base font-semibold leading-tight text-button-text transition-all hover:bg-button-bg hover:text-contrast active:scale-[0.97]"
+						class="nav-item inline-flex w-full cursor-pointer items-center gap-2 rounded-xl border-none bg-transparent px-4 py-2.5 text-left text-base font-semibold leading-tight text-button-text transition-all hover:bg-button-bg hover:text-contrast active:scale-[0.97]"
 						:class="{ 'is-active': isActive(item as NavStackLinkItem) }"
 					>
 						<component

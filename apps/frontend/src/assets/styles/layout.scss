@@ -50,6 +50,7 @@
 
 	@media screen and (max-width: 1024px) {
 		margin-top: 1.5rem;
+		padding: 0 1rem;
 	}
 
 	.normal-page__sidebar {
@@ -62,6 +63,8 @@
 
 	.normal-page__content {
 		grid-area: content;
+		width: 100%;
+		min-width: 0;
 	}
 
 	.normal-page__header {
@@ -116,6 +119,8 @@
 	}
 
 	.normal-page__content {
+		width: 100%;
+		min-width: 0;
 		max-width: calc(80rem - 18.75rem - 1.5rem);
 		//overflow-x: hidden;
 	}
@@ -164,6 +169,8 @@
 
 	.normal-page__content {
 		grid-area: content;
+		width: 100%;
+		min-width: 0;
 		max-width: calc(80rem - 18.75rem - 1.5rem);
 		//overflow-x: hidden;
 	}

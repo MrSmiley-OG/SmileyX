@@ -22,6 +22,10 @@ export async function removeEnqueuedUpdate() {
 	return await invoke('remove_enqueued_update')
 }
 
+export async function setRestartAfterPendingUpdate(should_restart) {
+	return await invoke('set_restart_after_pending_update', { shouldRestart: should_restart })
+}
+
 // One of 'Windows', 'Linux', 'MacOS'
 export async function getOS() {
 	return await invoke('plugin:utils|get_os')
@@ -31,11 +35,6 @@ export async function getOS() {
 export async function initUpdateLauncher(downloadUrl, filename, osType, autoUpdateSupported) {
   console.log('Downloading build', downloadUrl, filename, osType, autoUpdateSupported)
   return await invoke('plugin:utils|init_update_launcher', { downloadUrl, filename, osType, autoUpdateSupported })
-}
-
-// This code is modified by AstralRinth
-export async function applyMigrationFix(eol) {
-  return await invoke('plugin:utils|apply_migration_fix', { eol })
 }
 
 export async function isNetworkMetered() {

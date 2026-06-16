@@ -19,10 +19,12 @@ pub mod worlds;
 
 pub mod data {
     pub use crate::state::{
-        CacheBehaviour, CacheValueType, Credentials, Dependency, DirectoryInfo,
-        Hooks, JavaVersion, LinkedData, MemorySettings, ModLoader,
-        ModrinthCredentials, Organization, ProcessMetadata, ProfileFile,
-        Project, ProjectType, SearchResult, SearchResults, Settings,
+        CacheBehaviour, CacheValueType, ContentItem, ContentItemOwner,
+        ContentItemProject, ContentItemVersion, Credentials, Dependency,
+        DirectoryInfo, Hooks, JavaVersion, LinkedData, LinkedModpackInfo,
+        MemorySettings, ModLoader, ModrinthCredentials, Organization,
+        OwnerType, ProcessMetadata, ProfileFile, Project, ProjectType,
+        ProjectV3, SearchResult, SearchResults, SearchResultsV3, Settings,
         TeamMember, Theme, User, UserFriend, Version, WindowSize,
     };
     pub use ariadne::users::UserStatus;
@@ -36,6 +38,7 @@ pub mod prelude {
         jre, metadata, minecraft_auth, mr_auth, pack, process,
         profile::{self, Profile, create},
         settings,
+        state::ReleaseChannel,
         util::{
             io::{IOError, canonicalize},
             network::{is_network_metered, tcp_listen_any_loopback},

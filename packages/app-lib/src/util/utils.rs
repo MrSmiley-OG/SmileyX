@@ -6,7 +6,6 @@
 ///
 use crate::api::update;
 use crate::event::emit::emit_info;
-use crate::state::db;
 use crate::{Result, State};
 
 use serde::{Deserialize, Serialize};
@@ -212,18 +211,6 @@ async fn extract_metadata_from_elyby_file(
         .to_string();
 
     Ok((asset_name, download_url))
-}
-
-/// Applying migration fix for SQLite database.
-pub async fn apply_migration_fix(eol: &str) -> Result<bool> {
-    tracing::info!("[AR] • Attempting to apply migration fix");
-    let patched = db::apply_migration_fix(eol).await?;
-    if patched {
-        tracing::info!("[AR] • Successfully applied migration fix");
-    } else {
-        tracing::error!("[AR] • Failed to apply migration fix");
-    }
-    Ok(patched)
 }
 
 /// Initialize the update launcher.

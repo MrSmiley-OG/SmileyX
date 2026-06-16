@@ -1,5 +1,15 @@
 <template>
 	<KeybindsModal ref="keybindsModal" />
+	<ConfirmModal
+		v-if="lockStatus?.locked && !lockStatus?.isOwnLock"
+		ref="takeOverModal"
+		title="Override moderation lock"
+		description="Are you sure you want to override?"
+		:has-to-type="false"
+		:markdown="false"
+		proceed-label="Take over"
+		@proceed="confirmTakeOverOverride"
+	/>
 	<div
 		tabindex="0"
 		class="moderation-checklist flex w-[600px] max-w-full flex-col rounded-2xl border-[1px] border-solid border-orange bg-bg-raised p-4 transition-all delay-200 duration-200 ease-in-out"
@@ -57,10 +67,10 @@
 				</div>
 				<div class="mt-auto">
 					<div
-						class="mt-4 flex grow justify-between gap-2 border-0 border-t-[1px] border-solid border-divider pt-4"
+						class="mt-4 flex grow justify-between gap-2 border-0 border-t-[1px] border-solid border-surface-5 pt-4"
 					>
 						<div class="flex items-center gap-2">
-							<ButtonStyled v-if="lockStatus.expired" @click="retryAcquireLock">
+							<ButtonStyled @click="openTakeOverModal">
 								<button>
 									<LockIcon aria-hidden="true" />
 									Take over
@@ -69,13 +79,13 @@
 						</div>
 						<div class="flex items-center gap-2">
 							<ButtonStyled
-								v-if="moderationStore.isQueueMode && moderationStore.queueLength > 1"
+								v-if="moderationQueue.isQueueMode && moderationQueue.queueLength > 1"
 								color="brand"
 								@click="skipToNextProject"
 							>
 								<button>
 									<RightArrowIcon aria-hidden="true" />
-									Next project ({{ moderationStore.queueLength }} left)
+									Next project ({{ moderationQueue.queueLength }} left)
 								</button>
 							</ButtonStyled>
 						</div>
@@ -90,7 +100,7 @@
 				</div>
 				<div class="mt-auto">
 					<div
-						class="mt-4 flex grow justify-between gap-2 border-0 border-t-[1px] border-solid border-divider pt-4"
+						class="mt-4 flex grow justify-between gap-2 border-0 border-t-[1px] border-solid border-surface-5 pt-4"
 					>
 						<div class="flex items-center gap-2">
 							<ButtonStyled @click="reviewAnyway">
@@ -102,13 +112,13 @@
 						</div>
 						<div class="flex items-center gap-2">
 							<ButtonStyled
-								v-if="moderationStore.isQueueMode && moderationStore.queueLength > 1"
+								v-if="moderationQueue.isQueueMode && moderationQueue.queueLength > 1"
 								color="brand"
 								@click="skipToNextProject"
 							>
 								<button>
 									<RightArrowIcon aria-hidden="true" />
-									Next project ({{ moderationStore.queueLength }} left)
+									Next project ({{ moderationQueue.queueLength }} left)
 								</button>
 							</ButtonStyled>
 						</div>
@@ -121,9 +131,9 @@
 					<div v-if="done">
 						<p>
 							You are done moderating this project!
-							<template v-if="moderationStore.hasItems">
+							<template v-if="moderationQueue.hasItems">
 								There are
-								{{ moderationStore.queueLength }} left.
+								{{ moderationQueue.queueLength }} left.
 							</template>
 						</p>
 					</div>
@@ -148,15 +158,17 @@
 								placeholder="No message generated."
 								:disabled="false"
 								:heading-buttons="false"
+								:on-image-upload="onUploadHandler"
+								@input="persistGeneratedMessageState"
 							/>
-							<textarea
+							<StyledInput
 								v-else
 								v-model="message"
-								type="text"
-								class="bg-bg-input h-[400px] w-full rounded-lg border border-solid border-divider px-3 py-2 font-mono text-base"
+								multiline
 								placeholder="No message generated."
 								autocomplete="off"
-								@input="persistState"
+								input-class="h-[400px] font-mono"
+								@input="persistGeneratedMessageState"
 							/>
 						</div>
 					</div>
@@ -288,6 +300,7 @@
 												:max-height="300"
 												:disabled="false"
 												:heading-buttons="false"
+												:on-image-upload="onUploadHandler"
 												@input="persistState"
 											/>
 										</template>
@@ -298,13 +311,12 @@
 													<span v-if="input.required" class="required">*</span>
 												</span>
 											</label>
-											<input
+											<StyledInput
 												:id="`input-${getActionId(action)}-${inputIndex}`"
 												v-model="textInputValues[`${getActionId(action)}-${inputIndex}`]"
-												type="text"
 												:placeholder="input.placeholder"
 												autocomplete="off"
-												@input="persistState"
+												@update:model-value="persistState"
 											/>
 										</template>
 									</div>
@@ -317,13 +329,13 @@
 				<!-- Stage control buttons -->
 				<div class="mt-auto">
 					<div
-						class="mt-4 flex grow justify-between gap-2 border-0 border-t-[1px] border-solid border-divider pt-4"
+						class="mt-4 flex grow justify-between gap-2 border-0 border-t-[1px] border-solid border-surface-5 pt-4"
 					>
 						<div class="flex items-center gap-2">
-							<ButtonStyled v-if="!done && !generatedMessage && moderationStore.hasItems">
+							<ButtonStyled v-if="!done && !generatedMessage && moderationQueue.hasItems">
 								<button @click="skipCurrentProject">
 									<XIcon aria-hidden="true" />
-									Skip ({{ moderationStore.queueLength }} left)
+									Skip ({{ moderationQueue.queueLength }} left)
 								</button>
 							</ButtonStyled>
 						</div>
@@ -334,7 +346,7 @@
 									<button @click="endChecklist(undefined)">
 										<template v-if="hasNextProject">
 											<RightArrowIcon aria-hidden="true" />
-											Next project ({{ moderationStore.queueLength }} left)
+											Next project ({{ moderationQueue.queueLength }} left)
 										</template>
 										<template v-else>
 											<CheckIcon aria-hidden="true" />
@@ -346,26 +358,44 @@
 
 							<div v-else-if="generatedMessage" class="flex items-center gap-2">
 								<ButtonStyled>
-									<button @click="goBackToStages">
+									<button :disabled="loadingModerationDecision" @click="goBackToStages">
 										<LeftArrowIcon aria-hidden="true" />
 										Edit
 									</button>
 								</ButtonStyled>
 								<ButtonStyled color="red">
-									<button @click="sendMessage('rejected')">
-										<XIcon aria-hidden="true" />
+									<button :disabled="loadingModerationDecision" @click="sendMessage('rejected')">
+										<SpinnerIcon
+											v-if="moderationDecision === 'rejected'"
+											class="animate-spin"
+											aria-hidden="true"
+										/>
+										<XIcon v-else aria-hidden="true" />
 										Reject
 									</button>
 								</ButtonStyled>
 								<ButtonStyled color="orange">
-									<button @click="sendMessage('withheld')">
-										<EyeOffIcon aria-hidden="true" />
+									<button :disabled="loadingModerationDecision" @click="sendMessage('withheld')">
+										<SpinnerIcon
+											v-if="moderationDecision === 'withheld'"
+											class="animate-spin"
+											aria-hidden="true"
+										/>
+										<LinkIcon v-else aria-hidden="true" />
 										Withhold
 									</button>
 								</ButtonStyled>
 								<ButtonStyled color="green">
-									<button @click="sendMessage(projectV2.requested_status ?? 'approved')">
-										<CheckIcon aria-hidden="true" />
+									<button
+										:disabled="loadingModerationDecision"
+										@click="sendMessage(approveSendStatus)"
+									>
+										<SpinnerIcon
+											v-if="moderationDecision === approveSendStatus"
+											class="animate-spin"
+											aria-hidden="true"
+										/>
+										<CheckIcon v-else aria-hidden="true" />
 										Approve
 									</button>
 								</ButtonStyled>
@@ -383,13 +413,7 @@
 										</button>
 									</ButtonStyled>
 
-									<template
-										v-for="opt in stageOptions.filter(
-											(opt) => 'id' in opt && 'text' in opt && 'icon' in opt,
-										)"
-										#[opt.id]
-										:key="opt.id"
-									>
+									<template v-for="opt in stageOptionsForSlots" #[opt.id] :key="opt.id">
 										<component :is="opt.icon" v-if="opt.icon" class="mr-2" />
 										{{ opt.text }}
 									</template>
@@ -422,24 +446,25 @@ import {
 	BrushCleaningIcon,
 	CheckIcon,
 	DropdownIcon,
-	EyeOffIcon,
 	FileTextIcon,
 	KeyboardIcon,
 	LeftArrowIcon,
+	LinkIcon,
 	ListBulletedIcon,
 	LockIcon,
 	RightArrowIcon,
 	ScaleIcon,
+	SpinnerIcon,
 	ToggleLeftIcon,
 	ToggleRightIcon,
 	XIcon,
 } from '@modrinth/assets'
 import {
 	type Action,
+	type ActionState,
 	type ButtonAction,
 	checklist,
 	type ConditionalButtonAction,
-	deserializeActionStates,
 	type DropdownAction,
 	expandVariables,
 	finalPermissionMessages,
@@ -456,7 +481,6 @@ import {
 	keybinds,
 	type MultiSelectChipsAction,
 	processMessage,
-	serializeActionStates,
 	type Stage,
 	type ToggleAction,
 } from '@modrinth/moderation'
@@ -465,12 +489,14 @@ import {
 	ButtonStyled,
 	Checkbox,
 	Collapsible,
+	ConfirmModal,
 	DropdownSelect,
 	injectNotificationManager,
 	injectProjectPageContext,
 	MarkdownEditor,
 	OverflowMenu,
 	type OverflowMenuOption,
+	StyledInput,
 	useDebugLogger,
 } from '@modrinth/ui'
 import {
@@ -479,11 +505,27 @@ import {
 	type ProjectStatus,
 	renderHighlightedString,
 } from '@modrinth/utils'
-import { computedAsync, useDebounceFn, useLocalStorage } from '@vueuse/core'
+import { useQueryClient } from '@tanstack/vue-query'
+import { computedAsync, useDebounceFn } from '@vueuse/core'
+import type { Component } from 'vue'
 
 import { useGeneratedState } from '~/composables/generated'
+import { useImageUpload } from '~/composables/image-upload.ts'
 import { getProjectTypeForUrlShorthand } from '~/helpers/projects.js'
-import { useModerationStore } from '~/store/moderation.ts'
+import {
+	clearChecklistProgressState,
+	clearGeneratedMessageState as clearPersistedGeneratedMessageState,
+	createEmptyGeneratedMessageState,
+	loadChecklistActionStates,
+	loadChecklistStage,
+	loadChecklistTextInputs,
+	loadGeneratedMessageState,
+	saveChecklistActionStates,
+	saveChecklistStage,
+	saveChecklistTextInputs,
+	saveGeneratedMessageState,
+} from '~/services/moderation-checklist-storage.ts'
+import { type LockAcquireResponse, useModerationQueue } from '~/services/moderation-queue.ts'
 
 import KeybindsModal from './ChecklistKeybindsModal.vue'
 import ModpackPermissionsFlow from './ModpackPermissionsFlow.vue'
@@ -493,14 +535,16 @@ const { addNotification } = notifications
 const debug = useDebugLogger('ModerationChecklist')
 
 const keybindsModal = ref<InstanceType<typeof KeybindsModal>>()
+const takeOverModal = ref<InstanceType<typeof ConfirmModal>>()
 
 const props = defineProps<{
 	collapsed: boolean
 }>()
 
-const { projectV2, projectV3 } = injectProjectPageContext()
+const { projectV2, projectV3, invalidate } = injectProjectPageContext()
 
-const moderationStore = useModerationStore()
+const moderationQueue = useModerationQueue()
+const queryClient = useQueryClient()
 const tags = useGeneratedState()
 const auth = await useAuth()
 
@@ -508,6 +552,7 @@ const lockStatus = ref<{
 	locked: boolean
 	lockedBy?: { id: string; username: string; avatar_url?: string }
 	lockedAt?: Date
+	expiresAt?: Date
 	expired?: boolean
 	isOwnLock: boolean
 } | null>(null)
@@ -533,13 +578,15 @@ const PREFETCH_STALE_MS = 30_000 // 30 seconds
 const PREFETCH_TARGET_COUNT = 3 // Keep 3 unlocked projects ready
 const PREFETCH_BATCH_SIZE = 5 // Check 5 at a time in parallel
 
-const LOCK_EXPIRY_MINUTES = 15
-
-function handleVisibilityChange() {
+async function handleVisibilityChange() {
 	if (document.visibilityState === 'visible' && lockStatus.value?.isOwnLock) {
 		// Immediately refresh the lock when returning to the tab
 		// This handles cases where the heartbeat was throttled while backgrounded
-		moderationStore.refreshLock()
+		const refreshResult = await moderationQueue.refreshLock()
+		if (!refreshResult.success) {
+			handleLockLost(refreshResult)
+			return
+		}
 		// Refresh prefetch queue when tab becomes visible (not debounced)
 		maintainPrefetchQueue()
 	}
@@ -552,7 +599,9 @@ function updateLockCountdown() {
 	}
 
 	const lockedAt = new Date(lockStatus.value.lockedAt)
-	const expiresAt = new Date(lockedAt.getTime() + LOCK_EXPIRY_MINUTES * 60 * 1000)
+	const expiresAt = lockStatus.value.expiresAt
+		? new Date(lockStatus.value.expiresAt)
+		: new Date(lockedAt.getTime() + 15 * 60 * 1000)
 	const now = new Date()
 	const remainingMs = expiresAt.getTime() - now.getTime()
 
@@ -579,10 +628,45 @@ function clearLockCountdown() {
 function startLockHeartbeat() {
 	lockCheckInterval.value = setInterval(
 		async () => {
-			await moderationStore.refreshLock()
+			const result = await moderationQueue.refreshLock()
+			if (!result.success) {
+				handleLockLost(result)
+			}
 		},
 		5 * 60 * 1000,
 	)
+}
+
+function handleLockLost(result: LockAcquireResponse) {
+	clearInterval(lockCheckInterval.value!)
+	lockCheckInterval.value = null
+	clearLockCountdown()
+
+	lockStatus.value = {
+		locked: result.locked_by != null,
+		lockedBy: result.locked_by,
+		lockedAt: result.locked_at ? new Date(result.locked_at) : undefined,
+		expiresAt: result.expires_at ? new Date(result.expires_at) : undefined,
+		expired: result.expired,
+		isOwnLock: false,
+	}
+	lockError.value = false
+
+	if (result.locked_by) {
+		addNotification({
+			title: 'Lock taken over',
+			text: `@${result.locked_by.username} is now moderating this project.`,
+			type: 'warning',
+		})
+		updateLockCountdown()
+		lockCountdownInterval.value = setInterval(updateLockCountdown, 1000)
+	} else {
+		addNotification({
+			title: 'Moderation lock lost',
+			text: 'Your lock on this project has expired. Acquire the lock again to continue.',
+			type: 'warning',
+		})
+	}
 }
 
 function handleLockAcquired() {
@@ -617,11 +701,11 @@ async function navigateToNextUnlockedProject(): Promise<boolean> {
 
 	// Quick re-check if close to expiry (last 5 seconds of TTL)
 	if (now - next.validatedAt > PREFETCH_STALE_MS - 5000) {
-		const recheck = await moderationStore.checkLock(next.projectId)
-		if (recheck.locked && !recheck.expired) {
-			// Project got locked, remove from queue and try next
+		const recheckResults = await batchCheckQueueCandidates([next.projectId])
+		const recheck = recheckResults.get(next.projectId)
+		if (!isEligibleQueueCandidate(recheck)) {
 			prefetchQueue.value.shift()
-			return navigateToNextUnlockedProject() // Recurse to try next
+			return navigateToNextUnlockedProject()
 		}
 	}
 
@@ -629,35 +713,18 @@ async function navigateToNextUnlockedProject(): Promise<boolean> {
 	prefetchQueue.value.shift()
 
 	// Mark skipped projects as completed
-	next.skippedIds.forEach((id) => moderationStore.completeCurrentProject(id, 'skipped'))
+	await Promise.all(
+		next.skippedIds.map((id) => moderationQueue.completeCurrentProject(id, 'skipped')),
+	)
 
-	if (next.skippedIds.length > 0) {
-		addNotification({
-			title: 'Skipped locked projects',
-			text: `Skipped ${next.skippedIds.length} project(s) being moderated by others.`,
-			type: 'info',
-		})
-	}
+	notifySkippedQueueProjects(next.skippedIds.length)
 
-	// Trigger prefetch replenishment in background (don't await)
 	maintainPrefetchQueue()
 
-	// Navigate to canonical URL if we have metadata (avoids middleware redirect)
-	if (next.slug && next.projectType) {
-		const urlType = getProjectTypeForUrlShorthand(next.projectType, [], tags.value)
-
-		navigateTo({
-			path: `/${urlType}/${next.slug}`,
-			state: { showChecklist: true },
-		})
-	} else {
-		// Fallback: use project ID (will trigger middleware redirect)
-		navigateTo({
-			name: 'type-id',
-			params: { type: 'project', id: next.projectId },
-			state: { showChecklist: true },
-		})
-	}
+	navigateToQueueProject(
+		{ slug: next.slug, projectType: next.projectType, locked: false, isProcessing: true },
+		next.projectId,
+	)
 	return true
 }
 
@@ -675,11 +742,46 @@ const isModpackPermissionsStage = computed(() => {
 	return currentStageObj.value.id === 'modpack-permissions'
 })
 
+async function onUploadHandler(file: File) {
+	const response = await useImageUpload(file, {
+		context: 'thread_message',
+		projectID: projectV2.value.id,
+	})
+	return response.url
+}
+
 const useSimpleEditor = ref(false)
-const message = ref('')
-const generatedMessage = ref(false)
+const checklistPersistenceProjectSlug = projectV2.value.slug
+const persistedGeneratedMessage = import.meta.client
+	? await loadGeneratedMessageState(checklistPersistenceProjectSlug)
+	: createEmptyGeneratedMessageState()
+const message = ref(
+	typeof persistedGeneratedMessage.message === 'string' ? persistedGeneratedMessage.message : '',
+)
+const generatedMessage = ref(persistedGeneratedMessage.generated === true)
 const loadingMessage = ref(false)
+const moderationDecision = ref<ProjectStatus | null>(null)
+const loadingModerationDecision = computed(() => moderationDecision.value !== null)
+const approveSendStatus = computed<ProjectStatus>(() => {
+	const requested = projectV2.value.requested_status
+	return requested ?? 'approved'
+})
 const done = ref(false)
+
+function persistGeneratedMessageState() {
+	void saveGeneratedMessageState(checklistPersistenceProjectSlug, {
+		generated: generatedMessage.value,
+		message: message.value,
+	})
+}
+
+function clearGeneratedMessageState() {
+	generatedMessage.value = false
+	message.value = ''
+	void clearPersistedGeneratedMessageState(checklistPersistenceProjectSlug)
+}
+
+watch([generatedMessage, message], persistGeneratedMessageState, { flush: 'sync' })
 
 function handleModpackPermissionsComplete() {
 	modpackPermissionsComplete.value = true
@@ -692,32 +794,46 @@ const emit = defineEmits<{
 
 async function handleExit() {
 	// Release if we own the lock, or if there was an error checking (we might still own it)
-	if (lockStatus.value?.isOwnLock || lockError.value) {
-		const released = await moderationStore.releaseLock(projectV2.value.id)
+	const projectId = projectV2.value?.id
+	if (projectId && (lockStatus.value?.isOwnLock || lockError.value)) {
+		const released = await moderationQueue.releaseLock(projectId)
 		if (!released && lockStatus.value?.isOwnLock) {
-			console.warn('Failed to release moderation lock for project:', projectV2.value.id)
+			console.warn('Failed to release moderation lock for project:', projectId)
 		}
 	}
 	emit('exit')
 }
 
-async function retryAcquireLock() {
-	const result = await moderationStore.acquireLock(projectV2.value.id)
+function openTakeOverModal() {
+	takeOverModal.value?.show()
+}
+
+async function confirmTakeOverOverride() {
+	const projectId = projectV2.value?.id
+	if (!projectId) {
+		console.warn('[confirmTakeOverOverride] No project ID available')
+		return
+	}
+	const result = await moderationQueue.overrideLock(projectId)
 
 	if (result.success) {
+		addNotification({
+			title: 'Moderation lock overridden',
+			text: 'You are now moderating this project.',
+			type: 'success',
+		})
 		handleLockAcquired()
 	} else if (result.locked_by) {
-		// Still locked by another moderator, update status
 		lockStatus.value = {
 			locked: true,
 			lockedBy: result.locked_by,
 			lockedAt: result.locked_at ? new Date(result.locked_at) : undefined,
+			expiresAt: result.expires_at ? new Date(result.expires_at) : undefined,
 			expired: result.expired,
 			isOwnLock: false,
 		}
 		lockError.value = false
 
-		// Restart countdown timer
 		updateLockCountdown()
 		if (!lockCountdownInterval.value) {
 			lockCountdownInterval.value = setInterval(updateLockCountdown, 1000)
@@ -734,61 +850,114 @@ function reviewAnyway() {
 	maintainPrefetchQueue()
 }
 
-// Batch check locks and fetch project metadata in parallel
-interface LockCheckResult {
+// Batch check locks, processing status, and fetch project metadata in parallel
+interface QueueCandidateCheck {
 	locked: boolean
 	expired?: boolean
 	isOwnLock?: boolean
 	slug?: string
 	projectType?: string
+	status?: string
+	isProcessing: boolean
 }
 
-async function batchCheckLocksWithMetadata(
-	projectIds: string[],
-): Promise<Map<string, LockCheckResult>> {
-	const results = new Map<string, LockCheckResult>()
-	const currentUserId = (auth.value?.user as { id?: string } | null)?.id
+function isEligibleQueueCandidate(result: QueueCandidateCheck | undefined): boolean {
+	if (!result?.isProcessing) return false
+	return !result.locked || !!result.expired || !!result.isOwnLock
+}
 
-	// Check locks and fetch minimal project data in parallel
+function notifySkippedQueueProjects(count: number) {
+	if (count <= 0) return
+	addNotification({
+		title: 'Skipped projects',
+		text: `Skipped ${count} project(s) already moderated or locked by others.`,
+		type: 'info',
+		autoCloseMs: 2000,
+	})
+}
+
+function navigateToQueueProject(result: QueueCandidateCheck, projectId: string) {
+	if (result.slug && result.projectType) {
+		const urlType = getProjectTypeForUrlShorthand(result.projectType, [], tags.value)
+		navigateTo({
+			path: `/${urlType}/${result.slug}`,
+			state: { showChecklist: true },
+		})
+	} else {
+		navigateTo({
+			name: 'type-project',
+			params: { type: 'project', project: projectId },
+			state: { showChecklist: true },
+		})
+	}
+}
+
+async function batchCheckQueueCandidates(
+	projectIds: string[],
+): Promise<Map<string, QueueCandidateCheck>> {
+	const results = new Map<string, QueueCandidateCheck>()
+
 	const checks = await Promise.allSettled(
 		projectIds.map(async (id) => {
-			// Parallel: check lock AND fetch project metadata
-			const [lockStatus, projectData] = await Promise.all([
-				moderationStore.checkLock(id),
+			const [lockResponse, projectData] = await Promise.all([
+				moderationQueue.checkLock(id),
 				useBaseFetch(`project/${id}`, { method: 'GET' }).catch(() => null),
 			])
 
-			// Check if lock is by the current user (own lock = can acquire)
-			const isOwnLock = lockStatus.locked_by?.id === currentUserId
+			const status = (projectData as { status?: string } | null)?.status
 
 			return {
 				id,
-				locked: lockStatus.locked,
-				expired: lockStatus.expired,
-				isOwnLock,
-				slug: (projectData as { slug?: string })?.slug,
-				projectType: (projectData as { project_type?: string })?.project_type,
+				locked: lockResponse.locked,
+				expired: lockResponse.expired,
+				isOwnLock: lockResponse.is_own_lock,
+				slug: (projectData as { slug?: string } | null)?.slug,
+				projectType: (projectData as { project_type?: string } | null)?.project_type,
+				status,
+				isProcessing: projectData === null ? true : status === 'processing',
 			}
 		}),
 	)
 
-	// Use forEach with index to avoid indexOf bug on PromiseSettledResult
 	checks.forEach((result, index) => {
 		if (result.status === 'fulfilled') {
 			results.set(result.value.id, result.value)
 		} else {
-			// On error, mark as needing fallback (no metadata)
-			results.set(projectIds[index], { locked: false })
+			results.set(projectIds[index], { locked: false, isProcessing: true })
 		}
 	})
 
 	return results
 }
 
+async function findNextEligibleQueueProject(candidateIds: string[]) {
+	const skippedIds: string[] = []
+	let checkedCount = 0
+
+	while (checkedCount < candidateIds.length) {
+		const batch = candidateIds.slice(checkedCount, checkedCount + PREFETCH_BATCH_SIZE)
+		checkedCount += batch.length
+
+		const results = await batchCheckQueueCandidates(batch)
+
+		for (const id of batch) {
+			const result = results.get(id)
+			if (isEligibleQueueCandidate(result)) {
+				return { projectId: id, result: result!, skippedIds: [...skippedIds] }
+			}
+			skippedIds.push(id)
+		}
+	}
+
+	return null
+}
+
 // Maintain a queue of prefetched unlocked projects for instant navigation
 async function maintainPrefetchQueue() {
 	if (isPrefetching.value) return
-	if (!moderationStore.isQueueMode) return
+	if (!moderationQueue.isQueueMode) return
+
+	const currentProjectId = projectV2.value?.id
 
 	isPrefetching.value = true
 
@@ -798,7 +967,9 @@ async function maintainPrefetchQueue() {
 		prefetchQueue.value = prefetchQueue.value.filter((p) => now - p.validatedAt < PREFETCH_STALE_MS)
 
 		// 2. Remove entries for current project
-		prefetchQueue.value = prefetchQueue.value.filter((p) => p.projectId !== projectV2.value.id)
+		if (currentProjectId) {
+			prefetchQueue.value = prefetchQueue.value.filter((p) => p.projectId !== currentProjectId)
+		}
 
 		// 3. If queue is full enough, exit early
 		if (prefetchQueue.value.length >= PREFETCH_TARGET_COUNT) {
@@ -807,18 +978,15 @@ async function maintainPrefetchQueue() {
 
 		// 4. Get remaining queue items (excluding current and already prefetched)
 		const prefetchedIds = new Set(prefetchQueue.value.map((p) => p.projectId))
-		const queueItems = [...moderationStore.currentQueue.items]
-		const currentIndex = queueItems.indexOf(projectV2.value.id)
+		const queueItems = [...moderationQueue.currentQueue.items]
+		const currentIndex = currentProjectId ? queueItems.indexOf(currentProjectId) : -1
 		const remainingItems =
 			currentIndex >= 0 ? queueItems.slice(currentIndex + 1) : queueItems.slice(1)
 
-		const candidateIds = remainingItems
-			.filter((id) => !prefetchedIds.has(id))
-			.slice(0, PREFETCH_BATCH_SIZE * 2) // Check up to 10 candidates
+		const candidateIds = remainingItems.filter((id) => !prefetchedIds.has(id))
 
 		if (candidateIds.length === 0) return
 
-		// 5. Batch check locks AND fetch metadata in parallel
 		const skippedIds: string[] = []
 		let checkedCount = 0
 
@@ -829,31 +997,18 @@ async function maintainPrefetchQueue() {
 			const batch = candidateIds.slice(checkedCount, checkedCount + PREFETCH_BATCH_SIZE)
 			checkedCount += batch.length
 
-			const results = await batchCheckLocksWithMetadata(batch)
+			const results = await batchCheckQueueCandidates(batch)
 
 			for (const id of batch) {
 				const result = results.get(id)
-				// Treat as unlocked if: not locked, OR expired, OR it's our own lock
-				if (!result?.locked || result?.expired || result?.isOwnLock) {
-					// Found unlocked project with metadata
-					if (result?.slug && result?.projectType) {
-						prefetchQueue.value.push({
-							projectId: id,
-							slug: result.slug,
-							projectType: result.projectType,
-							validatedAt: Date.now(),
-							skippedIds: [...skippedIds],
-						})
-					} else {
-						// No metadata - still add but will need fallback navigation
-						prefetchQueue.value.push({
-							projectId: id,
-							slug: '', // Empty = use fallback
-							projectType: '',
-							validatedAt: Date.now(),
-							skippedIds: [...skippedIds],
-						})
-					}
+				if (isEligibleQueueCandidate(result)) {
+					prefetchQueue.value.push({
+						projectId: id,
+						slug: result?.slug ?? '',
+						projectType: result?.projectType ?? '',
+						validatedAt: Date.now(),
+						skippedIds: [...skippedIds],
+					})
 
 					if (prefetchQueue.value.length >= PREFETCH_TARGET_COUNT) break
 				} else {
@@ -869,18 +1024,20 @@ async function maintainPrefetchQueue() {
 // Debounced prefetch to prevent spam from rapid stage changes
 const debouncedPrefetch = useDebounceFn(maintainPrefetchQueue, 300)
 
-const MAX_SKIP_ATTEMPTS = 10
-
 async function skipToNextProject() {
 	// Skip the current project
-	const currentProjectId = projectV2.value.id
+	const currentProjectId = projectV2.value?.id
+	if (!currentProjectId) {
+		console.warn('[skipToNextProject] No current project ID, aborting')
+		return
+	}
 	debug('[skipToNextProject] Starting. Current project:', currentProjectId)
-	debug('[skipToNextProject] Queue before complete:', [...moderationStore.currentQueue.items])
+	debug('[skipToNextProject] Queue before complete:', [...moderationQueue.currentQueue.items])
 
-	moderationStore.completeCurrentProject(currentProjectId, 'skipped')
+	await moderationQueue.completeCurrentProject(currentProjectId, 'skipped')
 
-	debug('[skipToNextProject] Queue after complete:', [...moderationStore.currentQueue.items])
-	debug('[skipToNextProject] hasItems:', moderationStore.hasItems)
+	debug('[skipToNextProject] Queue after complete:', [...moderationQueue.currentQueue.items])
+	debug('[skipToNextProject] hasItems:', moderationQueue.hasItems)
 
 	// Use prefetched data if available
 	if (await navigateToNextUnlockedProject()) {
@@ -890,60 +1047,28 @@ async function skipToNextProject() {
 
 	debug('[skipToNextProject] No prefetch, entering fallback with batch checking')
 
-	// Fallback: batch check remaining projects with metadata (excluding current)
-	const remainingIds: string[] = []
-	const queueItems = moderationStore.currentQueue.items
-
-	// Build list of remaining projects, excluding current
-	for (const id of queueItems) {
-		if (id === currentProjectId) continue
-		if (remainingIds.length >= MAX_SKIP_ATTEMPTS) break
-		remainingIds.push(id)
-	}
+	const remainingIds = moderationQueue.currentQueue.items.filter((id) => id !== currentProjectId)
 
 	if (remainingIds.length > 0) {
-		const results = await batchCheckLocksWithMetadata(remainingIds)
+		const next = await findNextEligibleQueueProject(remainingIds)
 
-		let skippedCount = 0
-		for (const id of remainingIds) {
-			const result = results.get(id)
-			// Treat as unlocked if: not locked, OR expired, OR it's our own lock
-			if (!result?.locked || result?.expired || result?.isOwnLock) {
-				// Found unlocked - skip the locked ones before it
-				if (skippedCount > 0) {
-					addNotification({
-						title: 'Skipped locked projects',
-						text: `Skipped ${skippedCount} project(s) being moderated by others.`,
-						type: 'info',
-					})
-				}
-
-				// Navigate to canonical URL if we have metadata
-				if (result?.slug && result?.projectType) {
-					const urlType = getProjectTypeForUrlShorthand(result.projectType, [], tags.value)
-					navigateTo({
-						path: `/${urlType}/${result.slug}`,
-						state: { showChecklist: true },
-					})
-				} else {
-					// Fallback: use project ID
-					navigateTo({
-						name: 'type-id',
-						params: { type: 'project', id },
-						state: { showChecklist: true },
-					})
-				}
-				return
-			}
-			moderationStore.completeCurrentProject(id, 'skipped')
-			skippedCount++
+		if (next) {
+			await Promise.all(
+				next.skippedIds.map((id) => moderationQueue.completeCurrentProject(id, 'skipped')),
+			)
+			notifySkippedQueueProjects(next.skippedIds.length)
+			navigateToQueueProject(next.result, next.projectId)
+			return
 		}
 
-		// All checked were locked
-		debug('[skipToNextProject] All projects were locked, skippedCount:', skippedCount)
+		await Promise.all(
+			remainingIds.map((id) => moderationQueue.completeCurrentProject(id, 'skipped')),
+		)
+
+		debug('[skipToNextProject] No eligible projects in queue')
 		addNotification({
-			title: 'All projects locked',
-			text: 'All remaining projects are currently being moderated by others.',
+			title: 'No projects available',
+			text: 'All remaining projects are already moderated or locked by others.',
 			type: 'warning',
 		})
 	}
@@ -958,9 +1083,9 @@ function resetProgress() {
 	textInputValues.value = {}
 
 	done.value = false
-	generatedMessage.value = false
-	message.value = ''
+	clearGeneratedMessageState()
 	loadingMessage.value = false
+	moderationDecision.value = null
 
 	localStorage.removeItem(`modpack-permissions-${projectV2.value.id}`)
 	localStorage.removeItem(`modpack-permissions-index-${projectV2.value.id}`)
@@ -985,8 +1110,11 @@ function findFirstValidStage(): number {
 }
 
 const currentStageObj = computed(() => checklist[currentStage.value])
-const currentStage = useLocalStorage(`moderation-stage-${projectV2.value.slug}`, () =>
-	findFirstValidStage(),
+const persistedStage = import.meta.client
+	? await loadChecklistStage(checklistPersistenceProjectSlug)
+	: null
+const currentStage = ref(
+	persistedStage !== null && checklist[persistedStage] ? persistedStage : findFirstValidStage(),
 )
 
 const stageTextExpanded = computedAsync(async () => {
@@ -1005,37 +1133,27 @@ const stageTextExpanded = computedAsync(async () => {
 	return null
 }, null)
 
-interface ActionState {
-	selected: boolean
-	value?: any
-}
-
-const persistedActionStates = useLocalStorage(
-	`moderation-actions-${projectV2.value.slug}`,
-	{},
-	{
-		serializer: {
-			read: (v: any) => (v ? deserializeActionStates(v) : {}),
-			write: (v: any) => serializeActionStates(v),
-		},
-	},
-)
+const persistedActionStates = import.meta.client
+	? await loadChecklistActionStates(checklistPersistenceProjectSlug)
+	: {}
 
 const router = useRouter()
 
-const persistedTextInputs = useLocalStorage(
-	`moderation-inputs-${projectV2.value.slug}`,
-	{} as Record<string, string>,
-)
+const persistedTextInputs = import.meta.client
+	? await loadChecklistTextInputs(checklistPersistenceProjectSlug)
+	: {}
 
-const actionStates = ref<Record<string, ActionState>>(persistedActionStates.value)
-const textInputValues = ref<Record<string, string>>(persistedTextInputs.value)
+const actionStates = ref<Record<string, ActionState>>(persistedActionStates)
+const textInputValues = ref<Record<string, string>>(persistedTextInputs)
 
 const persistState = () => {
-	persistedActionStates.value = actionStates.value
-	persistedTextInputs.value = textInputValues.value
+	void saveChecklistActionStates(checklistPersistenceProjectSlug, actionStates.value)
+	void saveChecklistTextInputs(checklistPersistenceProjectSlug, textInputValues.value)
 }
 
+watch(currentStage, (stage) => {
+	void saveChecklistStage(checklistPersistenceProjectSlug, stage)
+})
 watch(actionStates, persistState, { deep: true })
 watch(textInputValues, persistState, { deep: true })
 
@@ -1065,7 +1183,7 @@ function handleKeybinds(event: KeyboardEvent) {
 				isLoadingMessage: loadingMessage.value,
 				isModpackPermissionsStage: isModpackPermissionsStage.value,
 
-				futureProjectCount: moderationStore.queueLength,
+				futureProjectCount: moderationQueue.queueLength,
 				visibleActionsCount: visibleActions.value.length,
 
 				focusedActionIndex: focusedActionIndex.value,
@@ -1084,7 +1202,7 @@ function handleKeybinds(event: KeyboardEvent) {
 				tryResetProgress: resetProgress,
 				tryExitModeration: handleExit,
 
-				tryApprove: () => sendMessage(projectV2.value.requested_status ?? 'approved'),
+				tryApprove: () => sendMessage(approveSendStatus.value),
 				tryReject: () => sendMessage('rejected'),
 				tryWithhold: () => sendMessage('withheld'),
 				tryEditMessage: goBackToStages,
@@ -1162,39 +1280,25 @@ watch(currentStage, () => {
 
 onMounted(async () => {
 	window.addEventListener('keydown', handleKeybinds)
+	window.addEventListener('beforeunload', handleBeforeUnload)
 	document.addEventListener('visibilitychange', handleVisibilityChange)
 	notifications.setNotificationLocation('left')
 
-	// Check if project has already been reviewed (not in processing status)
 	if (projectV2.value.status !== 'processing') {
 		alreadyReviewed.value = true
 		return
 	}
 
-	// Try to acquire lock
-	const result = await moderationStore.acquireLock(projectV2.value.id)
+	const result = await moderationQueue.acquireLock(projectV2.value.id)
 
 	if (result.success) {
 		handleLockAcquired()
 	} else if (result.locked_by) {
-		// Actually locked by another moderator
-		// In queue mode with more projects - auto-skip to next project
-		if (moderationStore.isQueueMode && moderationStore.queueLength > 1) {
-			addNotification({
-				title: 'Project locked',
-				text: `Skipped project locked by @${result.locked_by.username}.`,
-				type: 'info',
-			})
-			// skipToNextProject already calls completeCurrentProject
-			await skipToNextProject()
-			return
-		}
-
-		// Single project mode or last in queue - show locked UI
 		lockStatus.value = {
 			locked: true,
 			lockedBy: result.locked_by,
 			lockedAt: result.locked_at ? new Date(result.locked_at) : undefined,
+			expiresAt: result.expires_at ? new Date(result.expires_at) : undefined,
 			expired: result.expired,
 			isOwnLock: false,
 		}
@@ -1208,7 +1312,25 @@ onMounted(async () => {
 	}
 })
 
+function handleBeforeUnload() {
+	const projectId = projectV2.value?.id
+	if (!projectId || !lockStatus.value?.isOwnLock) return
+
+	const config = useRuntimeConfig()
+	const base = config.public.apiBaseUrl.replace(/\/v\d\/?$/, '/_internal/')
+	const token = (auth as unknown as { value?: { token?: string } }).value?.token
+	if (!token) return
+
+	// sendBeacon is POST-only and cannot set Authorization. The internal POST /release endpoint
+	// accepts the same token as text/plain (matches useBaseFetch's Authorization value).
+	void navigator.sendBeacon(
+		`${base}moderation/lock/${projectId}/release`,
+		new Blob([token], { type: 'text/plain' }),
+	)
+}
+
 onUnmounted(() => {
+	window.removeEventListener('beforeunload', handleBeforeUnload)
 	window.removeEventListener('keydown', handleKeybinds)
 	document.removeEventListener('visibilitychange', handleVisibilityChange)
 	notifications.setNotificationLocation('right')
@@ -1217,6 +1339,12 @@ onUnmounted(() => {
 		clearInterval(lockCheckInterval.value)
 	}
 	clearLockCountdown()
+
+	// Release lock if we own it (navigation away without explicit exit)
+	const projectId = projectV2.value?.id
+	if (projectId && lockStatus.value?.isOwnLock) {
+		void moderationQueue.releaseLock(projectId)
+	}
 
 	// Clear prefetch state to prevent memory leaks
 	prefetchQueue.value = []
@@ -1640,7 +1768,7 @@ function shouldShowStage(stage: Stage): boolean {
 
 function shouldShowAction(action: Action): boolean {
 	if (typeof action.shouldShow === 'function') {
-		return action.shouldShow(projectV2.value)
+		return action.shouldShow(projectV2.value, projectV3.value)
 	}
 
 	return true
@@ -1649,7 +1777,7 @@ function shouldShowAction(action: Action): boolean {
 function getVisibleDropdownOptions(action: DropdownAction) {
 	return action.options.filter((option) => {
 		if (typeof option.shouldShow === 'function') {
-			return option.shouldShow(projectV2.value)
+			return option.shouldShow(projectV2.value, projectV3.value)
 		}
 		return true
 	})
@@ -1658,7 +1786,7 @@ function getVisibleDropdownOptions(action: DropdownAction) {
 function getVisibleMultiSelectOptions(action: MultiSelectChipsAction) {
 	return action.options.filter((option) => {
 		if (typeof option.shouldShow === 'function') {
-			return option.shouldShow(projectV2.value)
+			return option.shouldShow(projectV2.value, projectV3.value)
 		}
 		return true
 	})
@@ -1707,8 +1835,7 @@ function nextStage() {
 }
 
 function goBackToStages() {
-	generatedMessage.value = false
-	message.value = ''
+	clearGeneratedMessageState()
 
 	let targetStage = checklist.length - 1
 	while (targetStage >= 0) {
@@ -1821,17 +1948,42 @@ function generateModpackMessage(allFiles: {
 }
 
 const hasNextProject = ref(false)
+async function refreshModerationCaches(threadId?: string) {
+	const refreshes: Promise<unknown>[] = [invalidate(), refreshNuxtData('moderation-projects')]
+
+	if (threadId) {
+		refreshes.push(queryClient.invalidateQueries({ queryKey: ['thread', threadId] }))
+	}
+
+	await Promise.allSettled(refreshes)
+}
+
 async function sendMessage(status: ProjectStatus) {
+	// Capture project data upfront to avoid null issues during async operations
+	const projectId = projectV2.value?.id
+	const threadId = projectV2.value?.thread_id
+	const projectType = projectV2.value?.project_type
+
+	if (!projectId) {
+		addNotification({
+			title: 'Error submitting moderation',
+			text: 'Project data unavailable. Please try again.',
+			type: 'error',
+		})
+		return
+	}
+
+	moderationDecision.value = status
 	try {
-		await useBaseFetch(`project/${projectV2.value.id}`, {
+		await useBaseFetch(`project/${projectId}`, {
 			method: 'PATCH',
 			body: {
 				status,
 			},
 		})
 
-		if (message.value) {
-			await useBaseFetch(`thread/${projectV2.value.thread_id}`, {
+		if (message.value && threadId) {
+			await useBaseFetch(`thread/${threadId}`, {
 				method: 'POST',
 				body: {
 					body: {
@@ -1842,10 +1994,7 @@ async function sendMessage(status: ProjectStatus) {
 			})
 		}
 
-		if (
-			projectV2.value.project_type === 'modpack' &&
-			Object.keys(modpackJudgements.value).length > 0
-		) {
+		if (projectType === 'modpack' && Object.keys(modpackJudgements.value).length > 0) {
 			await useBaseFetch(`moderation/project`, {
 				internal: true,
 				method: 'POST',
@@ -1853,12 +2002,20 @@ async function sendMessage(status: ProjectStatus) {
 			})
 		}
 
+		await refreshModerationCaches(threadId)
+
+		const willHaveNext = await moderationQueue.completeCurrentProject(projectId, 'completed')
+
+		await Promise.race([
+			moderationQueue.releaseLock(projectId),
+			new Promise((r) => setTimeout(r, 2000)),
+		])
+
+		// Set both states together - hasNextProject MUST be set before done
+		// to avoid the race condition where done=true renders with hasNextProject=false
+		hasNextProject.value = willHaveNext
 		done.value = true
-
-		// Release the lock after successful submission
-		await moderationStore.releaseLock(projectV2.value.id)
-
-		hasNextProject.value = moderationStore.completeCurrentProject(projectV2.value.id, 'completed')
+		clearGeneratedMessageState()
 	} catch (error) {
 		console.error('Error submitting moderation:', error)
 		addNotification({
@@ -1866,6 +2023,8 @@ async function sendMessage(status: ProjectStatus) {
 			text: 'Failed to submit moderation decision. Please try again.',
 			type: 'error',
 		})
+	} finally {
+		moderationDecision.value = null
 	}
 }
 
@@ -1882,7 +2041,7 @@ async function endChecklist(status?: string) {
 
 		await nextTick()
 
-		if (moderationStore.currentQueue.total > 1) {
+		if (moderationQueue.currentQueue.total > 1) {
 			addNotification({
 				title: 'Moderation completed',
 				text: `You have completed the moderation queue.`,
@@ -1896,72 +2055,36 @@ async function endChecklist(status?: string) {
 			})
 		}
 	} else {
-		// Use prefetched data if available for instant navigation
 		if (!(await navigateToNextUnlockedProject())) {
-			// Fallback: batch check remaining projects with metadata
-			const remainingIds: string[] = []
-			const currentProjectId = projectV2.value.id
-			const queueItems = moderationStore.currentQueue.items
+			const currentProjectId = projectV2.value?.id
+			const remainingIds = moderationQueue.currentQueue.items.filter(
+				(id) => id !== currentProjectId,
+			)
 
-			// Build list of remaining projects, excluding current
-			for (const id of queueItems) {
-				if (id === currentProjectId) continue
-				if (remainingIds.length >= MAX_SKIP_ATTEMPTS) break
-				remainingIds.push(id)
-			}
-
-			let foundUnlocked = false
+			let foundEligible = false
 			if (remainingIds.length > 0) {
-				const results = await batchCheckLocksWithMetadata(remainingIds)
+				const next = await findNextEligibleQueueProject(remainingIds)
 
-				let skippedCount = 0
-				for (const id of remainingIds) {
-					const result = results.get(id)
-					// Treat as unlocked if: not locked, OR expired, OR it's our own lock
-					if (!result?.locked || result?.expired || result?.isOwnLock) {
-						// Found unlocked - skip the locked ones before it
-						if (skippedCount > 0) {
-							addNotification({
-								title: 'Skipped locked projects',
-								text: `Skipped ${skippedCount} project(s) being moderated by others.`,
-								type: 'info',
-							})
-						}
-
-						// Navigate to canonical URL if we have metadata
-						if (result?.slug && result?.projectType) {
-							const urlType = getProjectTypeForUrlShorthand(result.projectType, [], tags.value)
-							navigateTo({
-								path: `/${urlType}/${result.slug}`,
-								state: { showChecklist: true },
-							})
-						} else {
-							// Fallback: use project ID
-							navigateTo({
-								name: 'type-id',
-								params: { type: 'project', id },
-								state: { showChecklist: true },
-							})
-						}
-						foundUnlocked = true
-						break
-					}
-					moderationStore.completeCurrentProject(id, 'skipped')
-					skippedCount++
-				}
-
-				// If no unlocked projects found, show notification
-				if (!foundUnlocked && skippedCount > 0) {
+				if (next) {
+					await Promise.all(
+						next.skippedIds.map((id) => moderationQueue.completeCurrentProject(id, 'skipped')),
+					)
+					notifySkippedQueueProjects(next.skippedIds.length)
+					navigateToQueueProject(next.result, next.projectId)
+					foundEligible = true
+				} else {
+					await Promise.all(
+						remainingIds.map((id) => moderationQueue.completeCurrentProject(id, 'skipped')),
+					)
 					addNotification({
-						title: 'All projects locked',
-						text: 'All remaining projects are currently being moderated by others.',
+						title: 'No projects available',
+						text: 'All remaining projects are already moderated or locked by others.',
 						type: 'warning',
 					})
 				}
 			}
 
-			// If no unlocked projects found, go back to moderation queue
-			if (!foundUnlocked) {
+			if (!foundEligible) {
 				await navigateTo({
 					name: 'moderation',
 				})
@@ -1971,10 +2094,22 @@ async function endChecklist(status?: string) {
 }
 
 async function skipCurrentProject() {
-	// Release the lock before skipping
-	await moderationStore.releaseLock(projectV2.value.id)
+	const projectId = projectV2.value?.id
+	if (!projectId) {
+		addNotification({
+			title: 'Error skipping project',
+			text: 'Project data unavailable. Please try again.',
+			type: 'error',
+		})
+		return
+	}
 
-	hasNextProject.value = moderationStore.completeCurrentProject(projectV2.value.id, 'skipped')
+	await Promise.race([
+		moderationQueue.releaseLock(projectId),
+		new Promise((r) => setTimeout(r, 2000)),
+	])
+
+	hasNextProject.value = await moderationQueue.completeCurrentProject(projectId, 'skipped')
 
 	await endChecklist('skipped')
 }
@@ -1982,15 +2117,15 @@ async function skipCurrentProject() {
 function clearProjectLocalStorage() {
 	localStorage.removeItem(`modpack-permissions-${projectV2.value.id}`)
 	localStorage.removeItem(`modpack-permissions-index-${projectV2.value.id}`)
-	localStorage.removeItem(`moderation-actions-${projectV2.value.slug}`)
-	localStorage.removeItem(`moderation-inputs-${projectV2.value.slug}`)
-	localStorage.removeItem(`moderation-stage-${projectV2.value.slug}`)
 
 	sessionStorage.removeItem(`modpack-permissions-data-${projectV2.value.id}`)
 	sessionStorage.removeItem(`modpack-permissions-permanent-no-${projectV2.value.id}`)
 	sessionStorage.removeItem(`modpack-permissions-updated-${projectV2.value.id}`)
 
+	void clearChecklistProgressState(checklistPersistenceProjectSlug)
 	actionStates.value = {}
+	textInputValues.value = {}
+	clearGeneratedMessageState()
 }
 
 const isLastVisibleStage = computed(() => {
@@ -2038,6 +2173,12 @@ const stageOptions = computed<OverflowMenuOption[]>(() => {
 
 	return options
 })
+
+type StageOverflowSlotOption = OverflowMenuOption & { id: string; text: string; icon?: Component }
+
+const stageOptionsForSlots = computed(() =>
+	stageOptions.value.filter((opt): opt is StageOverflowSlotOption => 'id' in opt && 'text' in opt),
+)
 </script>
 
 <style scoped lang="scss">

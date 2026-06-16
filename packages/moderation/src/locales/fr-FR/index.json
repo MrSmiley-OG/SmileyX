@@ -11,6 +11,18 @@
   "nags.add-icon.title": {
     "defaultMessage": "Ajouter une icône"
   },
+  "nags.add-java-address.description": {
+    "defaultMessage": "Ajoutez l'adresse IP et le port que les joueurs Java Edition pourront utiliser pour rejoindre votre serveur."
+  },
+  "nags.add-java-address.title": {
+    "defaultMessage": "Ajouter une adresse Java"
+  },
+  "nags.add-links-server.description": {
+    "defaultMessage": "Ajoutez tous les liens pertinents destinés à des utilisateurs extérieurs à Modrinth, tels qu'un site web, une boutique ou une invitation Discord."
+  },
+  "nags.add-links-server.title": {
+    "defaultMessage": "Ajouter des liens externes"
+  },
   "nags.add-links.description": {
     "defaultMessage": "Ajoutez tous les liens pertinents pointant en dehors de Modrinth, tels que le code source, un système de suivi des problèmes ou une invitation Discord."
   },
@@ -54,10 +66,16 @@
     "defaultMessage": "Voir la galerie"
   },
   "nags.gpl-license-source-required.description": {
-    "defaultMessage": "Votre {type, select, mod {mod} plugin {plugin} other {projet}} utilise une licence qui exige que le code source soit accessible. Veuillez fournir un lien vers le code source ou un fichier contenant les sources pour chaque version supplémentaire, ou envisagez d’utiliser une autre licence."
+    "defaultMessage": "Votre {type} utilise une license qui a besoin d'avoir le code source disponible. Merci de mettre un lien au code source ou aux fichiers source pour chaque version additionnelle, ou sinon vous pouvez changer de license."
   },
   "nags.gpl-license-source-required.title": {
     "defaultMessage": "Fournir le code source"
+  },
+  "nags.identical-links.description": {
+    "defaultMessage": "Certains de vos liens externes semblent être identiques. Chaque lien ne devrait être entré qu'une seule fois et avec le type de lien correspondant."
+  },
+  "nags.identical-links.title": {
+    "defaultMessage": "Nettoyer des liens identiques"
   },
   "nags.image-heavy-description.description": {
     "defaultMessage": "Votre description doit contenir suffisamment de texte clair ou de texte alternatif pour les images, afin de rester accessible aux personnes utilisant des lecteurs d’écran ou disposant d’une connexion Internet lente."
@@ -90,7 +108,7 @@
     "defaultMessage": "Raccourcir les en-têtes"
   },
   "nags.minecraft-title-clause.description": {
-    "defaultMessage": "Les projets ne doivent pas utiliser la marque Minecraft ni inclure \"Minecraft\" comme élément principal du nom."
+    "defaultMessage": "Les projets ne doivent pas utiliser la marque Minecraft ni inclure « Minecraft » comme élément principal du nom."
   },
   "nags.minecraft-title-clause.title": {
     "defaultMessage": "Éviter la violation de marque"
@@ -122,8 +140,26 @@
   "nags.multiple-resolution-tags.title": {
     "defaultMessage": "Sélectionner la bonne résolution"
   },
+  "nags.select-compatibility.description": {
+    "defaultMessage": "Sélectionnez quelles versions votre serveur prend en charge, choisissez un modpack, ou publiez le vôtre."
+  },
+  "nags.select-compatibility.title": {
+    "defaultMessage": "Sélectionner la comptabilité"
+  },
+  "nags.select-country.description": {
+    "defaultMessage": "Faites savoir aux joueurs dans quel région se trouve votre serveur."
+  },
+  "nags.select-country.title": {
+    "defaultMessage": "Supprimer une région"
+  },
+  "nags.select-language.description": {
+    "defaultMessage": "Lisyez la ou les langues prises en charge par votre serveur."
+  },
+  "nags.select-language.title": {
+    "defaultMessage": "Sélectionner une langue"
+  },
   "nags.select-license.description": {
-    "defaultMessage": "Sélectionnez la licence sous laquelle votre {type, select, mod {mod} modpack {modpack} resourcepack {pack de ressources} shader {shader} plugin {plugin} datapack {data pack} other {projet}} est distribué."
+    "defaultMessage": "Sélectionnez la licence votre {type} est distribué."
   },
   "nags.select-license.title": {
     "defaultMessage": "Sélectionner une licence"
@@ -133,6 +169,9 @@
   },
   "nags.select-tags.title": {
     "defaultMessage": "Sélectionner les tags"
+  },
+  "nags.server.title": {
+    "defaultMessage": "Visiter les paramètres du serveur"
   },
   "nags.settings.description.title": {
     "defaultMessage": "Accéder aux paramètres de la description"
@@ -173,6 +212,12 @@
   "nags.title-contains-technical-info.title": {
     "defaultMessage": "Nettoyer le nom"
   },
+  "nags.too-many-tags-server.description": {
+    "defaultMessage": "Vous avez sélectionné {tagCount, plural, one {# tag} other {# tags}}. Veuillez réduire à {maxTagCount} ou moins pour garantir que votre serveur apparaisse dans les résultats de recherche pertinents."
+  },
+  "nags.too-many-tags-server.title": {
+    "defaultMessage": "Sélectionnez des tags correspondants"
+  },
   "nags.too-many-tags.description": {
     "defaultMessage": "Vous avez sélectionné {tagCount, plural, one {# tag} other {# tags}}. Pensez à réduire à {maxTagCount} ou moins afin que votre projet apparaisse dans des résultats de recherche pertinents."
   },
@@ -180,7 +225,10 @@
     "defaultMessage": "Sélectionnez des tags précis"
   },
   "nags.upload-gallery-image.description": {
-    "defaultMessage": "Au moins une image de la galerie est requise pour présenter le contenu de votre {type, select, resourcepack {pack de ressources, sauf pour les packs audio ou de localisation. Si votre pack correspond à cette description, veuillez sélectionner le tag approprié} shader {shader} other {projet}}."
+    "defaultMessage": "Au moins une image dans la galerie est nécessaire pour montrer le contenu de votre {type}."
+  },
+  "nags.upload-gallery-image.resourcepack-type": {
+    "defaultMessage": "Les Packs de ressources, sauf l'audio ou les packs de localisation. Si ceci décrit votre pack, merci d'utiliser des étiquettes appropriées"
   },
   "nags.upload-gallery-image.title": {
     "defaultMessage": "Ajouter une image à la galerie"

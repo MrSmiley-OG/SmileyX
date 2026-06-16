@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import type { MessageDescriptor } from '@modrinth/ui'
-import { ButtonStyled, defineMessage, defineMessages, ServersSpecs, useVIntl } from '@modrinth/ui'
-import { formatPrice } from '@modrinth/utils'
+import { type MessageDescriptor, useFormatPrice } from '@modrinth/ui'
+import {
+	ButtonStyled,
+	commonMessages,
+	defineMessage,
+	defineMessages,
+	ServersSpecs,
+	useVIntl,
+} from '@modrinth/ui'
 
-const { formatMessage, locale } = useVIntl()
+const { formatMessage } = useVIntl()
+const formatPrice = useFormatPrice()
 
 const emit = defineEmits<{
 	(e: 'select' | 'scroll-to-faq'): void
@@ -19,6 +26,11 @@ const messages = defineMessages({
 	selectPlanButton: {
 		id: 'hosting.plan.select-plan',
 		defaultMessage: 'Select plan',
+	},
+	billedInterval: {
+		id: 'servers.purchase.step.plan.billed',
+		defaultMessage:
+			'billed {interval, select, monthly {monthly} quarterly {quarterly} yearly {yearly} other {{interval}}}',
 	},
 })
 
@@ -37,10 +49,7 @@ const plans: Record<
 		buttonColor: 'blue',
 		accentText: 'text-blue',
 		accentBg: 'bg-bg-blue',
-		name: defineMessage({
-			id: 'servers.plan.small.name',
-			defaultMessage: 'Small',
-		}),
+		name: commonMessages.planSmallLabel,
 		description: defineMessage({
 			id: 'servers.plan.small.description',
 			defaultMessage: 'Perfect for 1–5 friends with a few light mods.',
@@ -51,10 +60,7 @@ const plans: Record<
 		buttonColor: 'green',
 		accentText: 'text-green',
 		accentBg: 'bg-bg-green',
-		name: defineMessage({
-			id: 'servers.plan.medium.name',
-			defaultMessage: 'Medium',
-		}),
+		name: commonMessages.planMediumLabel,
 		description: defineMessage({
 			id: 'servers.plan.medium.description',
 			defaultMessage: 'Great for 6–15 players and multiple mods.',
@@ -65,10 +71,7 @@ const plans: Record<
 		buttonColor: 'purple',
 		accentText: 'text-purple',
 		accentBg: 'bg-bg-purple',
-		name: defineMessage({
-			id: 'servers.plan.large.name',
-			defaultMessage: 'Large',
-		}),
+		name: commonMessages.planLargeLabel,
 		description: defineMessage({
 			id: 'servers.plan.large.description',
 			defaultMessage: 'Ideal for 15–25 players, modpacks, or heavy modding.',
@@ -132,10 +135,11 @@ const billingMonths = computed(() => {
 					</div>
 				</div>
 				<span class="m-0 text-2xl font-bold text-contrast">
-					{{ formatPrice(locale, price / billingMonths, currency, true) }}
-					{{ isUsa ? '' : currency }}
+					{{ formatPrice(price / billingMonths, currency, true) }}
 					<span class="text-lg font-semibold text-secondary">
-						/ month<template v-if="interval !== 'monthly'">, billed {{ interval }}</template>
+						/ month<template v-if="interval !== 'monthly'"
+							>, {{ formatMessage(messages.billedInterval, { interval }) }}</template
+						>
 					</span>
 				</span>
 				<p class="m-0 max-w-[18rem]">{{ formatMessage(plans[plan].description) }}</p>

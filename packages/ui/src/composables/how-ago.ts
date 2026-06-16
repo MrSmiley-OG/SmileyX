@@ -1,31 +1,14 @@
-import { computed, type ComputedRef } from 'vue'
+import { LRUCache } from 'lru-cache'
 
 import { injectI18n } from '../providers/i18n'
+import { LOCALES } from './i18n.ts'
 
-export type Formatter = (value: Date | number | null | undefined, options?: FormatOptions) => string
+const formatterCache = new LRUCache<string, Intl.RelativeTimeFormat>({ max: 15 })
 
-export interface FormatOptions {
-	roundingMode?: 'halfExpand' | 'floor' | 'ceil'
-}
-
-const formatters = new Map<string, ComputedRef<Intl.RelativeTimeFormat>>()
-
-export function useRelativeTime(): Formatter {
+export function useRelativeTime(options?: Intl.RelativeTimeFormatOptions) {
 	const { locale } = injectI18n()
 
-	const formatterRef = computed(
-		() =>
-			new Intl.RelativeTimeFormat(locale.value, {
-				numeric: 'auto',
-				style: 'long',
-			}),
-	)
-
-	if (!formatters.has(locale.value)) {
-		formatters.set(locale.value, formatterRef)
-	}
-
-	return (value: Date | number | null | undefined) => {
+	return (value: Date | number | string | null | undefined) => {
 		if (value == null) {
 			return ''
 		}
@@ -46,7 +29,7 @@ export function useRelativeTime(): Formatter {
 		const months = Math.round(diff / 2629746000)
 		const years = Math.round(diff / 31556952000)
 
-		const rtf = formatterRef.value
+		const rtf = getFormatter(locale.value, options)
 
 		if (Math.abs(seconds) < 60) {
 			return rtf.format(seconds, 'second')
@@ -64,4 +47,24 @@ export function useRelativeTime(): Formatter {
 			return rtf.format(years, 'year')
 		}
 	}
+}
+
+function getFormatter(
+	locale: string,
+	options?: Intl.RelativeTimeFormatOptions,
+): Intl.RelativeTimeFormat {
+	const localeDefinition = LOCALES.find((loc) => loc.code === locale)
+	const numeric = options?.numeric ?? localeDefinition?.numeric ?? 'auto'
+	const style = options?.style ?? 'long'
+	const cacheKey = `${locale}:${numeric}:${style}`
+	let formatter = formatterCache.get(cacheKey)
+	if (!formatter) {
+		formatter = new Intl.RelativeTimeFormat(locale, {
+			...options,
+			numeric,
+			style,
+		})
+		formatterCache.set(cacheKey, formatter)
+	}
+	return formatter
 }
