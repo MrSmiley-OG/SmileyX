@@ -117,6 +117,25 @@ const route = useRoute()
 const APP_LEFT_NAV_WIDTH = '4rem'
 const APP_SIDEBAR_WIDTH = 300
 const INTERCOM_BUBBLE_DEFAULT_PADDING = 20
+// This code line modified by AstralRinth
+const filteredNewsPhrases = [
+  "LGBT",
+  "LGBTQ",
+  "LGBTQ+",
+  "LGBTQIA+",
+  "gay",
+  "lesbian",
+  "bisexual",
+  "pansexual",
+  "asexual",
+  "aromantic",
+  "transgender",
+  "nonbinary",
+  "intersex",
+  "homosexual",
+  "homosexuality",
+  "pride",
+];
 const credentials = ref()
 const sidebarToggled = ref(true)
 const unsubscribeSidebarToggle = themeStore.$subscribe(() => {
@@ -288,6 +307,21 @@ const messages = defineMessages({
 	},
 })
 
+// This code line modified by AstralRinth
+function shouldHideNewsArticle(article) {
+	const haystack = [
+		article?.title,
+		article?.summary,
+		article?.description,
+		article?.excerpt,
+	]
+		.filter(Boolean)
+		.join(' ')
+		.toLowerCase()
+
+	return filteredNewsPhrases.some((phrase) => haystack.includes(phrase.toLowerCase()))
+}
+
 // This code is modified by AstralRinth
 async function setupApp() {
 	// This code line modified by AstralRinth
@@ -396,6 +430,7 @@ async function setupApp() {
 		.then((res) => {
 			if (res && res.articles) {
 				news.value = res.articles
+					.filter((article) => !shouldHideNewsArticle(article))
 					.map((article) => ({
 						...article,
 						path: article.link,
