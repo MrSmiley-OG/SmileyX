@@ -110,6 +110,87 @@
   "app.auth-servers.unreachable.header": {
     "message": "Нет связи с серверами аутентификации"
   },
+  "astralrinth.app.launcher-update.available.action": {
+    "message": "Посмотреть обновление"
+  },
+  "astralrinth.app.launcher-update.available.text": {
+    "message": "Новая версия AstralRinth уже доступна для загрузки."
+  },
+  "astralrinth.app.launcher-update.available.title": {
+    "message": "Доступно обновление лаунчера"
+  },
+  "astralrinth.app.settings.update-installing": {
+    "message": "Установка обновления..."
+  },
+  "astralrinth.app.settings.view-update-info": {
+    "message": "Посмотреть информацию об обновлении"
+  },
+  "astralrinth.app.launcher-update-modal.error.close-action": {
+    "message": "Закрыть"
+  },
+  "astralrinth.app.launcher-update-modal.error.description": {
+    "message": "AstralRinth не удалось скачать файл обновления с сервера."
+  },
+  "astralrinth.app.launcher-update-modal.error.header": {
+    "message": "Не удалось скачать обновление"
+  },
+  "astralrinth.app.launcher-update-modal.error.help-link": {
+    "message": "релизы репозитория AstralRinth"
+  },
+  "astralrinth.app.launcher-update-modal.error.help-suffix": {
+    "message": "если там доступен более новый релиз."
+  },
+  "astralrinth.app.launcher-update-modal.error.help-text": {
+    "message": "Вы можете скачать его вручную из"
+  },
+  "astralrinth.app.launcher-update-modal.error.local-version": {
+    "message": "Локальная версия AstralRinth:"
+  },
+  "astralrinth.app.launcher-update-modal.error.title": {
+    "message": "Не удалось скачать файл"
+  },
+  "astralrinth.app.launcher-update-modal.update.cancel-action": {
+    "message": "Отмена"
+  },
+  "astralrinth.app.launcher-update-modal.update.description": {
+    "message": "Вы используете более старую версию. Рекомендуем обновиться сейчас, чтобы получить последние исправления и улучшения."
+  },
+  "astralrinth.app.launcher-update-modal.update.download-action": {
+    "message": "Скачать обновление и закрыть"
+  },
+  "astralrinth.app.launcher-update-modal.update.header": {
+    "message": "Обновление лаунчера AstralRinth"
+  },
+  "astralrinth.app.launcher-update-modal.update.installed-version": {
+    "message": "💾 Установленная и запущенная версия:"
+  },
+  "astralrinth.app.launcher-update-modal.update.latest-release-tag": {
+    "message": "☁️ Тег последнего релиза:"
+  },
+  "astralrinth.app.launcher-update-modal.update.latest-release-title": {
+    "message": "☁️ Название последнего релиза:"
+  },
+  "astralrinth.app.launcher-update-modal.update.notice-lead": {
+    "message": "Перед установкой обновления сохраните работу, закройте все запущенные экземпляры лаунчера и сделайте резервную копию его данных."
+  },
+  "astralrinth.app.launcher-update-modal.update.notice-macos": {
+    "message": "На macOS важные данные могут находиться в"
+  },
+  "astralrinth.app.launcher-update-modal.update.notice-outro": {
+    "message": "Чтобы избежать потери данных, сохраните резервную копию в безопасном месте перед продолжением."
+  },
+  "astralrinth.app.launcher-update-modal.update.notice-windows": {
+    "message": "На Windows важные данные могут находиться в"
+  },
+  "astralrinth.app.launcher-update-modal.update.notice-title": {
+    "message": "⚠️ Перед продолжением"
+  },
+  "astralrinth.app.launcher-update-modal.update.repository-link": {
+    "message": "Открыть репозиторий проекта"
+  },
+  "astralrinth.app.launcher-update-modal.update.title": {
+    "message": "Доступна новая версия лаунчера AstralRinth."
+  },
   "astralrinth.app.minecraft-account.add-elyby-account": {
     "message": "Добавить Ely.by аккаунт"
   },

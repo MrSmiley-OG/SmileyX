@@ -24,3 +24,10 @@
 		0 0 2px rgba(16, 250, 229, 0.4),
 		0 0 4px rgba(16, 250, 229, 0.25);
 }
+
+code {
+	background: linear-gradient(90deg, #005eff, #00cfff);
+	background-clip: text;
+	-webkit-background-clip: text;
+	color: transparent;
+}

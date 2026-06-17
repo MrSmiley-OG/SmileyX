@@ -85,7 +85,7 @@ import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
 import { config } from '@/config'
 import { check_reachable } from '@/helpers/auth.js'
 import { get_user, get_version } from '@/helpers/cache.js'
-import { command_listener, notification_listener, warning_listener, log_listener } from '@/helpers/events.js'
+import { command_listener, notification_listener, warning_listener } from '@/helpers/events.js'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { create_profile_and_install_from_file } from '@/helpers/pack'
 import { list } from '@/helpers/profile.js'
@@ -109,7 +109,7 @@ import { AppNotificationManager } from './providers/app-notifications'
 import { AppPopupNotificationManager } from './providers/app-popup-notifications'
 
 // This code line modified by AstralRinth
-import { getRemote, updateState } from '@/helpers/update.js'
+import { fetchRemote, isUpdateAvailable } from '@/helpers/astralrinth/update'
 
 const themeStore = useTheming()
 const router = useRouter()
@@ -119,23 +119,23 @@ const APP_SIDEBAR_WIDTH = 300
 const INTERCOM_BUBBLE_DEFAULT_PADDING = 20
 // This code line modified by AstralRinth
 const filteredNewsPhrases = [
-  "LGBT",
-  "LGBTQ",
-  "LGBTQ+",
-  "LGBTQIA+",
-  "gay",
-  "lesbian",
-  "bisexual",
-  "pansexual",
-  "asexual",
-  "aromantic",
-  "transgender",
-  "nonbinary",
-  "intersex",
-  "homosexual",
-  "homosexuality",
-  "pride",
-];
+	'LGBT',
+	'LGBTQ',
+	'LGBTQ+',
+	'LGBTQIA+',
+	'gay',
+	'lesbian',
+	'bisexual',
+	'pansexual',
+	'asexual',
+	'aromantic',
+	'transgender',
+	'nonbinary',
+	'intersex',
+	'homosexual',
+	'homosexuality',
+	'pride',
+]
 const credentials = ref()
 const sidebarToggled = ref(true)
 const unsubscribeSidebarToggle = themeStore.$subscribe(() => {
@@ -171,6 +171,8 @@ const { handleError, addNotification } = notificationManager
 const popupNotificationManager = new AppPopupNotificationManager()
 providePopupNotificationManager(popupNotificationManager)
 const { addPopupNotification } = popupNotificationManager
+
+const settingsModal = ref(null)
 
 const appVersion = getVersion()
 const tauriApiClient = new TauriModrinthClient({
@@ -281,7 +283,22 @@ const authUnreachable = computed(() => {
 onMounted(async () => {
 	await useCheckDisableMouseover()
 	// This code line modified by AstralRinth
-	await getRemote(false)
+	await fetchRemote()
+	if (isUpdateAvailable.value) {
+		addPopupNotification({
+			title: formatMessage(messages.launcherUpdateAvailableTitle),
+			text: formatMessage(messages.launcherUpdateAvailableText),
+			type: 'info',
+			autoCloseMs: 12000,
+			buttons: [
+				{
+					label: formatMessage(messages.launcherUpdateAvailableAction),
+					action: () => settingsModal.value?.showUpdateModal?.(),
+					color: 'brand',
+				},
+			],
+		})
+	}
 
 	document.querySelector('body').addEventListener('click', handleClick)
 	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
@@ -304,6 +321,18 @@ const messages = defineMessages({
 		id: 'app.auth-servers.unreachable.body',
 		defaultMessage:
 			'Minecraft authentication servers may be down right now. Check your internet connection and try again later.',
+	},
+	launcherUpdateAvailableTitle: {
+		id: 'astralrinth.app.launcher-update.available.title',
+		defaultMessage: 'Launcher update available',
+	},
+	launcherUpdateAvailableText: {
+		id: 'astralrinth.app.launcher-update.available.text',
+		defaultMessage: 'New version of AstralRinth is available for download.',
+	},
+	launcherUpdateAvailableAction: {
+		id: 'astralrinth.app.launcher-update.available.action',
+		defaultMessage: 'View update',
 	},
 })
 
@@ -705,10 +734,7 @@ async function logOut() {
 }
 
 // This code line modified by AstralRinth
-const hasPlus = computed(
-	() =>
-		!!credentials.value?.user,
-)
+const hasPlus = computed(() => !!credentials.value?.user)
 
 async function fetchIntercomToken() {
 	const creds = await getCreds()
@@ -1121,18 +1147,20 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			</NavButton>
 			<div class="flex flex-grow"></div>
 			<!-- This code line modified by AstralRinth -->
-			<template v-if="updateState">
+			<template v-if="isUpdateAvailable">
 				<NavButton
 					class="neon-icon pulse"
-				v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
-				:to="() => $refs.settingsModal.show()">
+					v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
+					:to="() => $refs.settingsModal.show()"
+				>
 					<SettingsIcon />
 				</NavButton>
 			</template>
 			<template v-else>
 				<NavButton
-				v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
-				:to="() => $refs.settingsModal.show()">
+					v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
+					:to="() => $refs.settingsModal.show()"
+				>
 					<SettingsIcon />
 				</NavButton>
 			</template>

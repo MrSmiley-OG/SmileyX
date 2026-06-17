@@ -101,7 +101,7 @@ export default defineConfig({
 	},
 	// to make use of `TAURI_ENV_DEBUG` and other env variables
 	// https://v2.tauri.app/reference/environment-variables/#tauri-cli-hook-commands
-	envPrefix: ['VITE_', 'TAURI_', 'MODRINTH_'],
+	envPrefix: ['VITE_', 'TAURI_', 'MODRINTH_', 'GIT_ASTRALIUM_'],
 	build: {
 		rolldownOptions: {
 			onwarn(warning, defaultHandler) {

@@ -13,7 +13,6 @@ import {
 	ToggleRightIcon,
 } from '@modrinth/assets'
 import {
-	Button,
 	commonMessages,
 	commonSettingsMessages,
 	defineMessage,
@@ -26,7 +25,7 @@ import { getVersion } from '@tauri-apps/api/app'
 import { platform as getOsPlatform, version as getOsVersion } from '@tauri-apps/plugin-os'
 import { ref, watch } from 'vue'
 
-import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
+import LauncherUpdateModal from '@/components/ui/astralrinth/LauncherUpdateModal.vue'
 import AppearanceSettings from '@/components/ui/settings/AppearanceSettings.vue'
 import DefaultInstanceSettings from '@/components/ui/settings/DefaultInstanceSettings.vue'
 import FeatureFlagSettings from '@/components/ui/settings/FeatureFlagSettings.vue'
@@ -35,22 +34,16 @@ import LanguageSettings from '@/components/ui/settings/LanguageSettings.vue'
 import PrivacySettings from '@/components/ui/settings/PrivacySettings.vue'
 import ResourceManagementSettings from '@/components/ui/settings/ResourceManagementSettings.vue'
 import { get, set } from '@/helpers/settings.ts'
-import { getRemote, installState, updateState } from '@/helpers/update.js'
+import { isUpdateInstalling, isUpdateAvailable } from '@/helpers/astralrinth/update'
 import { injectAppUpdateDownloadProgress } from '@/providers/download-progress.ts'
 import { useTheming } from '@/store/state'
-
-type ModalHandle = {
-	hide: () => void
-	show: () => void
-}
 
 const themeStore = useTheming()
 const { formatMessage } = useVIntl()
 
 const devModeCounter = ref(0)
 const modal = ref<InstanceType<typeof TabbedModal> | null>(null)
-const updateModalView = ref<ModalHandle | null>(null)
-const updateRequestFailView = ref<ModalHandle | null>(null)
+const launcherUpdateModal = ref<InstanceType<typeof LauncherUpdateModal> | null>(null)
 
 const developerModeEnabled = defineMessage({
 	id: 'app.settings.developer-mode-enabled',
@@ -120,20 +113,11 @@ function show() {
 }
 
 function showUpdateModal() {
-	updateModalView.value?.show()
-	void getRemote(false)
+	modal.value?.show()
+	void launcherUpdateModal.value?.show()
 }
 
-async function initDownload() {
-	updateModalView.value?.hide()
-	const result = await getRemote(true)
-
-	if (!result) {
-		updateRequestFailView.value?.show()
-	}
-}
-
-defineExpose({ show })
+defineExpose({ show, showUpdateModal })
 
 const { progress, version: downloadingVersion } = injectAppUpdateDownloadProgress()
 
@@ -167,6 +151,14 @@ const messages = defineMessages({
 	downloading: {
 		id: 'app.settings.downloading',
 		defaultMessage: 'Downloading v{version}',
+	},
+	updateInstalling: {
+		id: 'astralrinth.app.settings.update-installing',
+		defaultMessage: 'Installing update...',
+	},
+	viewUpdateInfo: {
+		id: 'astralrinth.app.settings.view-update-info',
+		defaultMessage: 'View update info',
 	},
 })
 </script>
@@ -211,19 +203,19 @@ const messages = defineMessages({
 						</p>
 					</div>
 					<div
-						v-if="updateState"
+						v-if="isUpdateAvailable"
 						class="w-8 h-8 cursor-pointer hover:brightness-75 neon-icon pulse shrink-0"
 					>
-						<template v-if="installState">
+						<template v-if="isUpdateInstalling">
 							<SpinnerIcon
 								class="size-6 animate-spin"
-								v-tooltip.bottom="'Installing in process...'"
+								v-tooltip.bottom="formatMessage(messages.updateInstalling)"
 							/>
 						</template>
 						<template v-else>
 							<DownloadIcon
 								class="size-6"
-								v-tooltip.bottom="'View update info'"
+								v-tooltip.bottom="formatMessage(messages.viewUpdateInfo)"
 								@click="showUpdateModal()"
 							/>
 						</template>
@@ -233,100 +225,9 @@ const messages = defineMessages({
 		</template>
 	</TabbedModal>
 
-	<ModalWrapper
-		ref="updateModalView"
-		:has-to-type="false"
-		header="Request to update the AstralRinth launcher"
-	>
-		<div class="space-y-4">
-			<div class="space-y-2">
-				<strong>The new version of the AstralRinth launcher is available!</strong>
-				<p>Your version is outdated. We recommend that you update to the latest version.</p>
-				<br />
-				<br />
-				<p><strong>⚠️ Please, read this notice before initialize update process</strong></p>
-				<p>
-					Before updating, make sure that you have saved and closed all running instances and
-					made a backup copy of the launcher data such as
-					<code>%appdata%\Roaming\AstralRinthApp</code> on Windows or
-					<code>~/Library/Application Support/AstralRinthApp</code> on macOS. Remember that
-					the authors of the product are not responsible for the breakdown of your files, so
-					you should always make back up copies of them and keep them in a safe place.
-				</p>
-			</div>
-			<div class="text-sm text-secondary space-y-1">
-				<p>
-					<strong>☁️ Latest release tag:</strong>
-					<span id="releaseTag" class="neon-text"></span>
-					<br />
-					<strong>☁️ Latest release title:</strong>
-					<span id="releaseTitle" class="neon-text"></span>
-					<br />
-					<strong>💾 Installed & Running version:</strong>
-					<span class="neon-text">v{{ version }}</span>
-				</p>
-			</div>
-			<a
-				class="neon-text"
-				href="https://me.astralium.su/get/ar"
-				target="_blank"
-				rel="noopener noreferrer"
-			>
-				Checkout our git repository
-			</a>
-			<div class="absolute bottom-4 right-4 flex items-center gap-4 neon-button neon">
-				<Button class="bordered" @click="updateModalView?.hide()">Cancel</Button>
-				<Button class="bordered" @click="initDownload()">Download file</Button>
-			</div>
-		</div>
-	</ModalWrapper>
-
-	<ModalWrapper
-		ref="updateRequestFailView"
-		:has-to-type="false"
-		header="Failed to request a file from the server :("
-	>
-		<div class="space-y-4">
-			<div class="space-y-2">
-				<p><strong>Error occurred</strong></p>
-				<p>Unfortunately, the program was unable to download the file from our servers.</p>
-				<p>
-					Please try downloading it yourself from
-					<a
-						class="neon-text"
-						href="https://astralium.su/product/astralrinth/source"
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						AstralRinth repository
-					</a>
-					if there are any updates available.
-				</p>
-			</div>
-
-			<div class="text-sm text-secondary">
-				<p>
-					<strong>Local AstralRinth:</strong>
-					<span class="neon-text">v{{ version }}</span>
-				</p>
-			</div>
-
-			<div class="absolute bottom-4 right-4 flex items-center gap-4 neon-button neon">
-				<Button class="bordered" @click="updateRequestFailView?.hide()">Close</Button>
-			</div>
-		</div>
-	</ModalWrapper>
+	<LauncherUpdateModal ref="launcherUpdateModal" :version="version" />
 </template>
 
 <style lang="scss" scoped>
 @import '../../../../../../packages/assets/styles/astralrinth/neon-icon.scss';
-@import '../../../../../../packages/assets/styles/astralrinth/neon-button.scss';
-@import '../../../../../../packages/assets/styles/astralrinth/neon-text.scss';
-
-code {
-	background: linear-gradient(90deg, #005eff, #00cfff);
-	background-clip: text;
-	-webkit-background-clip: text;
-	color: transparent;
-}
 </style>
