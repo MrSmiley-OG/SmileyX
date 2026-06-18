@@ -395,6 +395,7 @@ async function setupApp() {
 	const dev = await isDev()
 	isDevEnvironment.value = dev
 	const version = await getVersion()
+	const upstreamVersion = version.length > 2 ? version.slice(0, -2) : version
 	showOnboarding.value = !onboarded
 
 	nativeDecorations.value = native_decorations
@@ -432,16 +433,7 @@ async function setupApp() {
 		}),
 	)
 
-	// This code line modified by AstralRinth
-	// await log_listener((e) =>
-	// 	addNotification({
-	// 		title: 'Log',
-	// 		text: e.message,
-	// 		type: 'info',
-	// 	}),
-	// )
-
-	fetch(`https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`)
+	fetch(`https://api.modrinth.com/appCriticalAnnouncement.json?version=${upstreamVersion}`)
 		.then((response) => response.json())
 		.then((res) => {
 			if (res && res.header && res.body) {
@@ -450,7 +442,7 @@ async function setupApp() {
 		})
 		.catch(() => {
 			console.log(
-				`No critical announcement found at https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
+				`No critical announcement found at https://api.modrinth.com/appCriticalAnnouncement.json?version=${upstreamVersion}`,
 			)
 		})
 
