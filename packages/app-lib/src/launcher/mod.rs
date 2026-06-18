@@ -14,7 +14,8 @@ use crate::state::{
     AccountType, Credentials, JavaVersion, ProcessMetadata, ProfileInstallStage,
 };
 use crate::util::rpc::RpcServerBuilder;
-use crate::util::{io, utils};
+use crate::util::io;
+use crate::util::astralrinth::utils;
 use crate::{State, get_resource_file, process, state as st};
 use chrono::Utc;
 use daedalus as d;

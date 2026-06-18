@@ -1,10 +1,7 @@
 ///
-/// This code is modified by AstralRinth
+/// This file is modified by AstralRinth
 ///
-/// Version: 0.1.2
-///
-///
-use crate::api::update;
+use crate::api::astralrinth::update;
 use crate::event::emit::emit_info;
 use crate::{Result, State};
 
@@ -15,8 +12,8 @@ use std::time::SystemTime;
 use tokio::{fs, io};
 
 const PACKAGE_JSON_CONTENT: &str =
-    // include_str!("../../../../apps/app-frontend/package.json");
-    include_str!("../../../../apps/app/tauri.conf.json");
+    // include_str!("../../../../../apps/app-frontend/package.json");
+    include_str!("../../../../../apps/app/tauri.conf.json");
 
 /// Deserialize the content of package.json into a Launcher struct
 pub fn read_package_json() -> io::Result<Launcher> {

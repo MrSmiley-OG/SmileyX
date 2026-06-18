@@ -11,7 +11,7 @@ use discord_rich_presence::{
 use rand::seq::SliceRandom; // This code is modified by AstralRinth
 use tokio::sync::RwLock;
 
-use crate::util::utils; // This code is modified by AstralRinth
+use crate::util::astralrinth::utils;
 use crate::State;
 
 pub struct DiscordGuard {

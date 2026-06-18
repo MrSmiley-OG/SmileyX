@@ -10,7 +10,7 @@ use crate::api::{Result, TheseusSerializableError};
 use dashmap::DashMap;
 use std::path::{Path, PathBuf};
 use theseus::prelude::canonicalize;
-use theseus::util::utils;
+use theseus::util::astralrinth::utils;
 use url::Url;
 
 pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
@@ -29,7 +29,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .build()
 }
 
-// This code is modified by AstralRinth
+// This code function is modified by AstralRinth
 #[tauri::command]
 pub async fn init_update_launcher(
     download_url: &str,

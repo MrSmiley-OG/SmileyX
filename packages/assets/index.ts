@@ -137,10 +137,10 @@ export const IntercomBubbleIcon = _IntercomBubbleIcon
 export const MinecraftServerIcon = _MinecraftServerIcon
 
 // This code is modified by AstralRinth
-import _AstralRinthLogo from './icons/astralrinth-logo.svg?component'
-import _ElyByIcon from './icons/elyby-icon.svg?component'
-import _MicrosoftIcon from './icons/microsoft.svg?component'
-import _OfflineIcon from './icons/offline.svg?component'
+import _AstralRinthLogo from './icons/astralrinth/astralrinth-logo.svg?component'
+import _ElyByIcon from './icons/astralrinth/elyby-icon.svg?component'
+import _MicrosoftIcon from './icons/astralrinth/microsoft.svg?component'
+import _OfflineIcon from './icons/astralrinth/offline.svg?component'
 export const OfflineIcon = _OfflineIcon
 export const MicrosoftIcon = _MicrosoftIcon
 export const AstralRinthLogo = _AstralRinthLogo
