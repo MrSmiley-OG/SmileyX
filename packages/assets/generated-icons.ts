@@ -41,7 +41,6 @@ import _EarlyServersBadge from './icons/badges/early-servers.svg?component'
 import _EarlyShadersBadge from './icons/badges/early-shaders.svg?component'
 import _ModeratorBadge from './icons/badges/moderator.svg?component'
 import _PlusBadge from './icons/badges/plus.svg?component'
-import _PrideBadge from './icons/badges/pride.svg?component'
 import _StaffBadge from './icons/badges/staff.svg?component'
 import _BanIcon from './icons/ban.svg?component'
 import _BellIcon from './icons/bell.svg?component'
@@ -464,7 +463,6 @@ export const EarlyServersBadge = _EarlyServersBadge
 export const EarlyShadersBadge = _EarlyShadersBadge
 export const ModeratorBadge = _ModeratorBadge
 export const PlusBadge = _PlusBadge
-export const PrideBadge = _PrideBadge
 export const StaffBadge = _StaffBadge
 export const BanIcon = _BanIcon
 export const BellIcon = _BellIcon
