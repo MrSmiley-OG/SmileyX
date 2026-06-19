@@ -58,18 +58,33 @@ export async function fetchRemote(): Promise<void> {
 		latestLauncherRelease.value = remoteData
 
 		if (systems.includes(currentOS.value as (typeof systems)[number])) {
-			const localVersion = normalizeVersion(await getVersion())
+			const rawLocalVersion = await getVersion()
+			const localVersion = normalizeVersion(rawLocalVersion)
 			const remoteVersion = normalizeVersion(remoteData.tag_name)
-			isUpdateAvailable.value = remoteVersion !== localVersion
+			const versionComparison = compareVersions(remoteVersion, localVersion)
+			isUpdateAvailable.value = versionComparison > 0
+
+			if (isDeveloper) {
+				console.debug('Raw local version is', rawLocalVersion)
+				console.debug('Normalized local version is', localVersion)
+				console.debug('Raw remote version is', remoteData.tag_name)
+				console.debug('Normalized remote version is', remoteVersion)
+				console.debug('Local version parts are', parseVersionParts(localVersion))
+				console.debug('Remote version parts are', parseVersionParts(remoteVersion))
+				console.debug('Version comparison result is', versionComparison)
+			}
 		} else {
 			isUpdateAvailable.value = false
+
+			if (isDeveloper) {
+				console.debug('Skipped update comparison for unsupported OS', currentOS.value)
+			}
 		}
 
 		if (isDeveloper) {
 			console.debug('Update available state is', isUpdateAvailable.value)
 			console.debug('Remote version is', remoteData.tag_name)
 			console.debug('Remote title is', remoteData.name)
-			console.debug('Local version is', await getVersion())
 			console.debug('Operating System is', currentOS.value)
 		}
 	} catch (error) {
@@ -145,4 +160,35 @@ function resolveOperationalSystemExtension(): string[] {
 
 function normalizeVersion(version: string): string {
 	return version.trim().replace(/^v/i, '')
+}
+
+function compareVersions(left: string, right: string): number {
+	const leftParts = parseVersionParts(left)
+	const rightParts = parseVersionParts(right)
+	const maxLength = Math.max(leftParts.length, rightParts.length)
+
+	for (let index = 0; index < maxLength; index += 1) {
+		const leftPart = leftParts[index] ?? 0
+		const rightPart = rightParts[index] ?? 0
+
+		if (leftPart !== rightPart) {
+			if (isDeveloper) {
+				console.debug('Version parts differ at index', index, leftPart, rightPart)
+			}
+			return leftPart - rightPart
+		}
+	}
+
+	if (isDeveloper) {
+		console.debug('Version parts are equal', leftParts, rightParts)
+	}
+
+	return 0
+}
+
+function parseVersionParts(version: string): number[] {
+	return normalizeVersion(version)
+		.split(/[.-]/)
+		.map((part) => Number.parseInt(part, 10))
+		.filter((part) => !Number.isNaN(part))
 }
