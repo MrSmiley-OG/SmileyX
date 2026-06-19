@@ -305,7 +305,7 @@ const emit = defineEmits<{
 }>()
 
 type MinecraftCredential = {
-	account_type?: 'microsoft' | 'pirate' | 'elyby' | string
+	account_type?: 'microsoft' | 'offline' | 'elyby' | string
 	profile: {
 		id: string
 		name: string
@@ -347,7 +347,7 @@ function getAccountType(account?: MinecraftCredential) {
 	switch (account?.account_type) {
 		case 'microsoft':
 			return MicrosoftIcon
-		case 'pirate':
+		case 'offline':
 			return OfflineIcon
 		case 'elyby':
 			return ElyByIcon

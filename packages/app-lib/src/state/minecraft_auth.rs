@@ -194,7 +194,7 @@ pub async fn offline_auth(
         refresh_token: refresh_token,
         expires: Utc::now() + Duration::days(365 * 99),
         active: true,
-        account_type: AccountType::Pirate.as_lowercase_str(),
+        account_type: AccountType::Offline.as_lowercase_str(),
     };
 
     credentials.offline_profile = MinecraftProfile {
@@ -241,7 +241,7 @@ pub async fn elyby_auth(
 pub enum AccountType {
     Unknown,
     Microsoft,
-    Pirate,
+    Offline,
     ElyBy,
 }
 
@@ -250,7 +250,7 @@ impl AccountType {
         match self {
             AccountType::Unknown => "Unknown",
             AccountType::Microsoft => "Microsoft",
-            AccountType::Pirate => "Pirate",
+            AccountType::Offline => "Offline",
             AccountType::ElyBy => "ElyBy",
         }
     }

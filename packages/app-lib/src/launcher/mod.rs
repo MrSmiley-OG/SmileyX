@@ -720,7 +720,7 @@ pub async fn launch_minecraft(
     }
 
     // This code is modified by AstralRinth
-    if credentials.account_type == AccountType::Pirate.as_lowercase_str() {
+    if credentials.account_type == AccountType::Offline.as_lowercase_str() {
         if version_jar == "1.16.4" || version_jar == "1.16.5" {
             let invalid_url = "https://invalid.invalid";
             let _ = emit_info(&format!(

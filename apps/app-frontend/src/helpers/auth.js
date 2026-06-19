@@ -13,11 +13,12 @@ import { invoke } from '@tauri-apps/api/core'
 //   await authenticate_await_completion()
 // }
 
+// This code function is modified by AstralRinth
 export async function offline_login(name) {
   return await invoke('plugin:auth|offline_login', { name: name })
 }
 
-// This code is modified by AstralRinth
+// This code function is modified by AstralRinth
 export async function elyby_login(uuid, login, accessToken) {
   return await invoke('plugin:auth|elyby_login', {
     uuid,
@@ -26,7 +27,7 @@ export async function elyby_login(uuid, login, accessToken) {
   })
 }
 
-// This code is modified by AstralRinth
+// This code function is modified by AstralRinth
 export async function elyby_auth_authenticate(login, password, clientToken) {
   return await invoke('plugin:auth|elyby_auth_authenticate', {
     login,

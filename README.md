@@ -63,8 +63,8 @@ Avoid using builds with these prefixes — they may be unstable or experimental:
 
 - No ads in the entire launcher.
 - Custom `.svg` vector icons for a distinct UI.
-- Improved compatibility with both licensed and pirate accounts.
-  - Use **official microsoft accounts** or **offline/pirate accounts**.
+- Improved compatibility with both licensed and offline accounts.
+  - Use **official microsoft accounts** or **offline accounts**.
   - Supports license-free access for testing or personal use.
   - No dependence on official authentication services.
 - Discord Rich Presence integration:
