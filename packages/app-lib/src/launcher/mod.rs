@@ -721,10 +721,11 @@ pub async fn launch_minecraft(
 
     // This code is modified by AstralRinth
     if credentials.account_type == AccountType::Offline.as_lowercase_str() {
+		// Will be applied only on Vanilla versions
         if version_jar == "1.16.4" || version_jar == "1.16.5" {
             let invalid_url = "https://invalid.invalid";
             let _ = emit_info(&format!(
-                "[AR] Detected launch of {} on the offline account. Applying 1.16.4/5 multiplayer fixes.",
+                "[AR] Detected launch of {} on the offline account. Applying vanilla 1.16.4/5multiplayer fixes.",
                 version_jar
             	)
         	).await;
