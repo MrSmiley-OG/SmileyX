@@ -19,21 +19,33 @@ pub struct DiscordGuard {
     connected: Arc<AtomicBool>,
 }
 
-pub(crate) const ACTIVE_STATE: [&str; 6] = [
+pub(crate) const ACTIVE_STATE: [&str; 12] = [
     "Explores",
     "Travels with",
     "Pirating",
     "Investigating the",
     "Engaged in",
     "Conducting",
+    "Charting",
+    "Raiding",
+    "Navigating through",
+    "Hunting treasures in",
+    "Mapping",
+    "Uncovering secrets of",
 ];
-pub(crate) const INACTIVE_STATE: [&str; 6] = [
+pub(crate) const INACTIVE_STATE: [&str; 12] = [
     "Idling...",
     "Waiting for the pirate team...",
     "Taking a break...",
     "Resting...",
     "On standby...",
     "In a holding pattern...",
+    "Watching the stars...",
+    "Sharpening the cutlass...",
+    "Checking the compass...",
+    "Planning the next voyage...",
+    "Guarding the treasure map...",
+    "Listening to sea shanties...",
 ];
 
 impl DiscordGuard {
@@ -103,7 +115,7 @@ impl DiscordGuard {
             utils::read_package_json().expect("Failed to read package.json");
 
         let build_info = format!("AR • v{}", launcher.version);
-        let build_download = "https://astralium.su/get/ar";
+        let build_download = "https://astralium.su/product/astralrinth";
 
         let time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
