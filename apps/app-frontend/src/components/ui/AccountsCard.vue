@@ -296,6 +296,7 @@ const additionalAccountOptions = computed(() => [
 
 function retryAddOfflineProfile() {
 	accountsErrorModals.value?.hideInputOfflineError()
+	offlineLoginDisabled.value = false
 	clearOfflineFields()
 	showOfflineLoginModal()
 }
@@ -334,6 +335,7 @@ async function addOfflineProfile() {
 	if (!isValidName) {
 		accountsInputModals.value?.hideOffline()
 		accountsErrorModals.value?.showInputOfflineError()
+		offlineLoginDisabled.value = false
 		clearOfflineFields()
 		return
 	}
