@@ -66,11 +66,6 @@ jobs:
             target: aarch64-apple-darwin
             rust_targets: aarch64-apple-darwin
             artifact_name: astralrinth-bundle-macos-aarch64
-          - runner: macos-latest
-            label: 🍎 macOS Universal Build
-            target: universal-apple-darwin
-            rust_targets: x86_64-apple-darwin,aarch64-apple-darwin
-            artifact_name: astralrinth-bundle-macos-universal
 
     env:
       CI: true
@@ -181,7 +176,7 @@ jobs:
 
       - name: 🔨 Build app
         shell: bash
-        run: mise exec -- pnpm --filter @modrinth/app run build -- --target ${{ matrix.target }}
+        run: mise exec -- pnpm --filter @modrinth/app exec tauri build --target ${{ matrix.target }}
 
       - name: 📤 Upload app bundles
         uses: actions/upload-artifact@v4
