@@ -138,126 +138,34 @@
 			</div>
 		</div>
 	</Accordion>
-	<ModalWrapper ref="addElyByModal" class="modal" header="Authenticate with Ely.by">
-		<ModalWrapper
-			ref="requestElyByTwoFactorCodeModal"
-			class="modal"
-			header="Ely.by requested 2FA code for authentication"
-		>
-			<div class="flex flex-col gap-4 px-6 py-5">
-				<label class="label form-label">Enter your 2FA code</label>
-				<input
-					v-model="elyByTwoFactorCode"
-					type="text"
-					placeholder="Your 2FA code here..."
-					class="input soft-input"
-				/>
-				<div class="mt-6 ml-auto">
-					<Button color="primary" :disabled="elyByLoginDisabled" @click="addElyByProfile()">
-						Continue
-					</Button>
-				</div>
-			</div>
-		</ModalWrapper>
-		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="label form-label">Enter your player name or email (preferred)</label>
-			<input
-				v-model="elyByLoginValue"
-				type="text"
-				placeholder="Your player name or email here..."
-				class="input soft-input"
-			/>
-			<label class="label form-label">Enter your password</label>
-			<input
-				v-model="elyByPassword"
-				type="password"
-				placeholder="Your password here..."
-				class="input soft-input"
-			/>
-			<div class="mt-6 ml-auto">
-				<Button color="primary" :disabled="elyByLoginDisabled" @click="addElyByProfile()">
-					Login
-				</Button>
-			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper ref="addOfflineModal" class="modal" header="Add new offline account">
-		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="label form-label">Enter your player name</label>
-			<input
-				v-model="offlinePlayerName"
-				type="text"
-				placeholder="Your player name here..."
-				class="input soft-input"
-			/>
-			<div class="mt-6 ml-auto">
-				<Button color="primary" @click="addOfflineProfile()">Login</Button>
-			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper
-		ref="authenticationElyByErrorModal"
-		class="modal"
-		header="Error while proceeding authentication event with Ely.by"
-	>
-		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="text-base font-medium text-red-700">
-				An error occurred while logging in.
-			</label>
-			<div class="mt-6 ml-auto">
-				<Button color="primary" @click="retryAddElyByProfile">Try again</Button>
-			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper
-		ref="inputElyByErrorModal"
-		class="modal"
-		header="Error while proceeding input event with Ely.by"
-	>
-		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="text-base font-medium text-red-700">
-				An error occurred while adding the Ely.by account. Please follow the instructions below.
-			</label>
-			<ul class="list-disc list-inside text-sm space-y-1">
-				<li>Check that you have entered the correct player name or email.</li>
-				<li>Check that you have entered the correct password.</li>
-			</ul>
-			<div class="mt-6 ml-auto">
-				<Button color="primary" @click="retryAddElyByProfile">Try again</Button>
-			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper
-		ref="inputOfflineErrorModal"
-		class="modal"
-		header="Error while proceeding input event with offline account"
-	>
-		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="text-base font-medium text-red-700">
-				An error occurred while adding the offline account. Please follow the instructions below.
-			</label>
-			<ul class="list-disc list-inside text-sm space-y-1">
-				<li>Check that you have entered the correct player name.</li>
-				<li>
-					Player name must be at least {{ minOfflinePlayerNameLength }} characters long and no more
-					than {{ maxOfflinePlayerNameLength }} characters.
-				</li>
-				<li>Make sure your name meets the format requirement `{{ nameExp }}`</li>
-			</ul>
-			<div class="mt-6 ml-auto">
-				<Button color="primary" @click="retryAddOfflineProfile">Try again</Button>
-			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper ref="unexpectedErrorModal" class="modal" header="Unexpected error occurred">
-		<div class="modal-body">
-			<label class="label">An unexpected error has occurred. Please try again later.</label>
-		</div>
-	</ModalWrapper>
+	<AccountsInputModals
+		ref="accountsInputModals"
+		:ely-by-login-disabled="elyByLoginDisabled"
+		:ely-by-login-value="elyByLoginValue"
+		:ely-by-password="elyByPassword"
+		:ely-by-two-factor-code="elyByTwoFactorCode"
+		:offline-login-disabled="offlineLoginDisabled"
+		:offline-player-name="offlinePlayerName"
+		@submit-elyby="addElyByProfile"
+		@submit-offline="addOfflineProfile"
+		@update:ely-by-login-value="elyByLoginValue = $event"
+		@update:ely-by-password="elyByPassword = $event"
+		@update:ely-by-two-factor-code="elyByTwoFactorCode = $event"
+		@update:offline-player-name="offlinePlayerName = $event"
+	/>
+	<AccountsErrorModals
+		ref="accountsErrorModals"
+		:max-offline-player-name-length="maxOfflinePlayerNameLength"
+		:min-offline-player-name-length="minOfflinePlayerNameLength"
+		:name-exp="nameExp"
+		@retry-elyby="retryAddElyByProfile"
+		@retry-offline="retryAddOfflineProfile"
+	/>
 </template>
 
 <script setup lang="ts">
-import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
+import AccountsErrorModals from '@/components/ui/astralrinth/accounts/error/AccountsErrorModals.vue'
+import AccountsInputModals from '@/components/ui/astralrinth/accounts/input/AccountsInputModals.vue'
 import { trackEvent } from '@/helpers/analytics'
 import {
 	elyby_auth_authenticate,
@@ -287,7 +195,6 @@ import {
 import {
 	Accordion,
 	Avatar,
-	Button,
 	ButtonStyled,
 	defineMessages,
 	injectNotificationManager,
@@ -312,12 +219,27 @@ type MinecraftCredential = {
 	}
 }
 
-type ModalHandle = {
-	hide: () => void
-	show: () => void
+type AccountsInputModalsHandle = {
+	hideElyBy: () => void
+	hideElyByTwoFactor: () => void
+	hideOffline: () => void
+	showElyBy: () => void
+	showElyByTwoFactor: () => void
+	showOffline: () => void
+}
+
+type AccountsErrorModalsHandle = {
+	hideAuthenticationElyByError: () => void
+	hideInputElyByError: () => void
+	hideInputOfflineError: () => void
+	showAuthenticationElyByError: () => void
+	showInputElyByError: () => void
+	showInputOfflineError: () => void
+	showUnexpectedError: () => void
 }
 
 const clientToken = 'astralrinth'
+const offlineLoginCooldownMs = 1000
 const minOfflinePlayerNameLength = 3
 const maxOfflinePlayerNameLength = 20
 const nameExp = 'a-zA-Z0-9_'
@@ -326,17 +248,13 @@ const nameRegex = new RegExp(`^[${nameExp}]+$`)
 const accounts: Ref<MinecraftCredential[]> = ref([])
 const loginDisabled = ref(false)
 const elyByLoginDisabled = ref(false)
+const offlineLoginDisabled = ref(false)
 const defaultUser = ref<string | undefined>()
 const equippedSkin = ref<Skin | null>(null)
 const headUrlCache = ref(new Map<string, string>())
 
-const addOfflineModal = ref<ModalHandle | null>(null)
-const addElyByModal = ref<ModalHandle | null>(null)
-const requestElyByTwoFactorCodeModal = ref<ModalHandle | null>(null)
-const authenticationElyByErrorModal = ref<ModalHandle | null>(null)
-const inputElyByErrorModal = ref<ModalHandle | null>(null)
-const inputOfflineErrorModal = ref<ModalHandle | null>(null)
-const unexpectedErrorModal = ref<ModalHandle | null>(null)
+const accountsInputModals = ref<AccountsInputModalsHandle | null>(null)
+const accountsErrorModals = ref<AccountsErrorModalsHandle | null>(null)
 
 const offlinePlayerName = ref('')
 const elyByLoginValue = ref('')
@@ -357,11 +275,11 @@ function getAccountType(account?: MinecraftCredential) {
 }
 
 function showOfflineLoginModal() {
-	addOfflineModal.value?.show()
+	accountsInputModals.value?.showOffline()
 }
 
 function showElyByLoginModal() {
-	addElyByModal.value?.show()
+	accountsInputModals.value?.showElyBy()
 }
 
 const additionalAccountOptions = computed(() => [
@@ -377,14 +295,14 @@ const additionalAccountOptions = computed(() => [
 ])
 
 function retryAddOfflineProfile() {
-	inputOfflineErrorModal.value?.hide()
+	accountsErrorModals.value?.hideInputOfflineError()
 	clearOfflineFields()
 	showOfflineLoginModal()
 }
 
 function retryAddElyByProfile() {
-	authenticationElyByErrorModal.value?.hide()
-	inputElyByErrorModal.value?.hide()
+	accountsErrorModals.value?.hideAuthenticationElyByError()
+	accountsErrorModals.value?.hideInputElyByError()
 	elyByLoginDisabled.value = false
 	clearElyByFields()
 	showElyByLoginModal()
@@ -401,6 +319,12 @@ function clearOfflineFields() {
 }
 
 async function addOfflineProfile() {
+	if (offlineLoginDisabled.value) {
+		return
+	}
+
+	offlineLoginDisabled.value = true
+
 	const name = offlinePlayerName.value.trim()
 	const isValidName =
 		nameRegex.test(name) &&
@@ -408,27 +332,30 @@ async function addOfflineProfile() {
 		name.length <= maxOfflinePlayerNameLength
 
 	if (!isValidName) {
-		addOfflineModal.value?.hide()
-		inputOfflineErrorModal.value?.show()
+		accountsInputModals.value?.hideOffline()
+		accountsErrorModals.value?.showInputOfflineError()
 		clearOfflineFields()
 		return
 	}
 
 	try {
 		const result = await offline_login(name)
-		addOfflineModal.value?.hide()
+		accountsInputModals.value?.hideOffline()
 
 		if (result) {
 			await setAccount(result)
 			await refreshValues()
 		} else {
-			unexpectedErrorModal.value?.show()
+			accountsErrorModals.value?.showUnexpectedError()
 		}
 	} catch (error) {
 		handleError(error)
-		unexpectedErrorModal.value?.show()
+		accountsErrorModals.value?.showUnexpectedError()
 	} finally {
 		clearOfflineFields()
+		window.setTimeout(() => {
+			offlineLoginDisabled.value = false
+		}, offlineLoginCooldownMs)
 	}
 }
 
@@ -436,8 +363,8 @@ async function addElyByProfile() {
 	elyByLoginDisabled.value = true
 
 	if (!elyByLoginValue.value || !elyByPassword.value) {
-		addElyByModal.value?.hide()
-		inputElyByErrorModal.value?.show()
+		accountsInputModals.value?.hideElyBy()
+		accountsErrorModals.value?.showInputElyByError()
 		clearElyByFields()
 		elyByLoginDisabled.value = false
 		return
@@ -460,13 +387,13 @@ async function addElyByProfile() {
 				jsonData.error === 'ForbiddenOperationException' &&
 				jsonData.errorMessage?.includes('two factor')
 			) {
-				requestElyByTwoFactorCodeModal.value?.show()
+				accountsInputModals.value?.showElyByTwoFactor()
 				return
 			}
 
-			addElyByModal.value?.hide()
-			requestElyByTwoFactorCodeModal.value?.hide()
-			authenticationElyByErrorModal.value?.show()
+			accountsInputModals.value?.hideElyBy()
+			accountsInputModals.value?.hideElyByTwoFactor()
+			accountsErrorModals.value?.showAuthenticationElyByError()
 			return
 		}
 
@@ -475,15 +402,15 @@ async function addElyByProfile() {
 		const selectedProfileName = jsonData.selectedProfile.name
 		const result = await elyby_login(selectedProfileId, selectedProfileName, accessToken)
 
-		addElyByModal.value?.hide()
-		requestElyByTwoFactorCodeModal.value?.hide()
+		accountsInputModals.value?.hideElyBy()
+		accountsInputModals.value?.hideElyByTwoFactor()
 		clearElyByFields()
 
 		await setAccount(result)
 		await refreshValues()
 	} catch (error) {
 		handleError(error)
-		unexpectedErrorModal.value?.show()
+		accountsErrorModals.value?.showUnexpectedError()
 	} finally {
 		elyByLoginDisabled.value = false
 	}
@@ -666,22 +593,8 @@ const messages = defineMessages({
 </script>
 
 <style scoped lang="scss">
-@import '../../../../../packages/assets/styles/astralrinth/soft-inputs.scss';
-
 .vector-icon {
 	width: 0.875rem;
 	height: 0.875rem;
-}
-
-.modal {
-	position: absolute;
-}
-
-.modal-body {
-	display: flex;
-	flex-direction: row;
-	gap: var(--gap-lg);
-	align-items: center;
-	padding: var(--gap-xl);
 }
 </style>
