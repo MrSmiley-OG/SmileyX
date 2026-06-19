@@ -42,14 +42,35 @@ jobs:
       matrix:
         include:
           - runner: ubuntu-latest
-            label: 🐧 Linux Build
-            artifact_name: astralrinth-bundle-linux
+            label: 🐧 Linux x86_64 Build
+            target: x86_64-unknown-linux-gnu
+            rust_targets: x86_64-unknown-linux-gnu
+            artifact_name: astralrinth-bundle-linux-x86_64
           - runner: windows-latest
-            label: 🪟 Windows Build
-            artifact_name: astralrinth-bundle-windows
+            label: 🪟 Windows x86_64 Build
+            target: x86_64-pc-windows-msvc
+            rust_targets: x86_64-pc-windows-msvc
+            artifact_name: astralrinth-bundle-windows-x86_64
+          - runner: windows-latest
+            label: 🪟 Windows aarch64 Build
+            target: aarch64-pc-windows-msvc
+            rust_targets: aarch64-pc-windows-msvc
+            artifact_name: astralrinth-bundle-windows-aarch64
           - runner: macos-latest
-            label: 🍎 macOS Build
-            artifact_name: astralrinth-bundle-macos
+            label: 🍎 macOS x86_64 Build
+            target: x86_64-apple-darwin
+            rust_targets: x86_64-apple-darwin
+            artifact_name: astralrinth-bundle-macos-x86_64
+          - runner: macos-latest
+            label: 🍎 macOS aarch64 Build
+            target: aarch64-apple-darwin
+            rust_targets: aarch64-apple-darwin
+            artifact_name: astralrinth-bundle-macos-aarch64
+          - runner: macos-latest
+            label: 🍎 macOS Universal Build
+            target: universal-apple-darwin
+            rust_targets: x86_64-apple-darwin,aarch64-apple-darwin
+            artifact_name: astralrinth-bundle-macos-universal
 
     env:
       CI: true
@@ -93,6 +114,8 @@ jobs:
 
       - name: 🧰 Setup Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.rust_targets }}
 
       - name: ☕ Setup Java 17
         uses: actions/setup-java@v4
@@ -158,13 +181,12 @@ jobs:
 
       - name: 🔨 Build app
         shell: bash
-        run: mise exec -- pnpm app:build
+        run: mise exec -- pnpm --filter @modrinth/app run build -- --target ${{ matrix.target }}
 
       - name: 📤 Upload app bundles
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: |
-            target/release/bundle/**
-            target/*/release/bundle/**
+            target/${{ matrix.target }}/release/bundle/**
           if-no-files-found: error
