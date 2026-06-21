@@ -156,10 +156,16 @@
     "message": "Вы используете более старую версию. Рекомендуем обновиться сейчас, чтобы получить последние исправления и улучшения."
   },
   "astralrinth.app.launcher-update-modal.update.download-action": {
-    "message": "Скачать обновление и закрыть"
+    "message": "Скачать обновление"
   },
   "astralrinth.app.launcher-update-modal.update.header": {
     "message": "Обновление лаунчера AstralRinth"
+  },
+  "astralrinth.app.launcher-update-modal.update.installer-description": {
+    "message": "Выберите пакет установщика, с которым хотите продолжить."
+  },
+  "astralrinth.app.launcher-update-modal.update.installer-title": {
+    "message": "Тип установщика"
   },
   "astralrinth.app.launcher-update-modal.update.installed-version": {
     "message": "💾 Установленная и запущенная версия:"
@@ -187,6 +193,9 @@
   },
   "astralrinth.app.launcher-update-modal.update.repository-link": {
     "message": "Открыть репозиторий проекта"
+  },
+  "astralrinth.app.launcher-update-modal.update.select-installer": {
+    "message": "Выберите установщик"
   },
   "astralrinth.app.launcher-update-modal.update.title": {
     "message": "Доступна новая версия лаунчера AstralRinth."

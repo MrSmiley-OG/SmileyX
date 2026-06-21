@@ -33,8 +33,8 @@ export async function getOS() {
 
 // This code is modified by AstralRinth
 export async function initUpdateLauncher(downloadUrl, filename, osType, autoUpdateSupported) {
-  console.log('Downloading build', downloadUrl, filename, osType, autoUpdateSupported)
-  return await invoke('plugin:utils|init_update_launcher', { downloadUrl, filename, osType, autoUpdateSupported })
+  console.log('Downloading build', downloadUrl, filename, osType)
+  return await invoke('plugin:utils|init_update_launcher', { downloadUrl, filename, osType })
 }
 
 export async function isNetworkMetered() {

@@ -215,18 +215,15 @@ pub async fn init_update_launcher(
     download_url: &str,
     local_filename: &str,
     os_type: &str,
-    auto_update_supported: bool,
 ) -> Result<()> {
     tracing::info!("[AR] • Initialize downloading from • {:?}", download_url);
     tracing::info!("[AR] • Save local file name • {:?}", local_filename);
     tracing::info!("[AR] • OS type • {}", os_type);
-    tracing::info!("[AR] • Auto update supported • {}", auto_update_supported);
 
     if let Err(e) = update::get_resource(
         download_url,
         local_filename,
         os_type,
-        auto_update_supported,
     )
     .await
     {

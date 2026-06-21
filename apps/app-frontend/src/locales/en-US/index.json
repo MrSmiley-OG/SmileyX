@@ -165,10 +165,16 @@
     "message": "You are using an older version. We recommend updating now for the latest fixes and improvements."
   },
   "astralrinth.app.launcher-update-modal.update.download-action": {
-    "message": "Download update and close"
+    "message": "Download update"
   },
   "astralrinth.app.launcher-update-modal.update.header": {
     "message": "AstralRinth launcher update"
+  },
+  "astralrinth.app.launcher-update-modal.update.installer-description": {
+    "message": "Choose the installer package you want to continue with."
+  },
+  "astralrinth.app.launcher-update-modal.update.installer-title": {
+    "message": "Installer type"
   },
   "astralrinth.app.launcher-update-modal.update.installed-version": {
     "message": "💾 Installed & Running version:"
@@ -196,6 +202,9 @@
   },
   "astralrinth.app.launcher-update-modal.update.repository-link": {
     "message": "Open the project repository"
+  },
+  "astralrinth.app.launcher-update-modal.update.select-installer": {
+    "message": "Select an installer"
   },
   "astralrinth.app.launcher-update-modal.update.title": {
     "message": "A new version of the AstralRinth launcher is available."

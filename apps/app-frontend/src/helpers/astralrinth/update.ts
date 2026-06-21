@@ -22,15 +22,15 @@ const LAUNCHER_LATEST_RELEASE_API = `${import.meta.env.GIT_ASTRALIUM_API_URL}rep
 
 export const isUpdateInstalling = ref(false)
 export const isUpdateAvailable = ref(false)
-export const latestLauncherRelease = ref<LauncherRelease | null>(null)
+export const latestLauncherReleases = ref<LauncherRelease | null>(null)
 
 const currentOS = ref('')
 
 const systems = ['macos', 'windows', 'linux'] as const
 const osExtensions = {
-	"linux": ['.deb'],
-	"macos": ['.dmg', '.pkg', '.app'],
-	"windows": ['.exe', '.msi']
+	linux: ['.deb', '.rpm', '.AppImage'],
+	macos: ['.dmg', '.pkg', '.app'],
+	windows: ['.exe', '.msi'],
 }
 
 const isDeveloper = await isDev()
@@ -47,15 +47,17 @@ const blacklistBeginPrefixes = [
 
 export async function fetchRemote(): Promise<void> {
 	currentOS.value = (await getOS()).toLowerCase()
-
 	try {
+		if (!currentOS.value) {
+			throw new Error(String('Current OS is undefined'))
+		}
 		const response = await fetch(LAUNCHER_LATEST_RELEASE_API)
 		if (!response.ok) {
 			throw new Error(String(response.status))
 		}
 
 		const remoteData = (await response.json()) as LauncherRelease
-		latestLauncherRelease.value = remoteData
+		latestLauncherReleases.value = remoteData
 
 		if (systems.includes(currentOS.value as (typeof systems)[number])) {
 			const rawLocalVersion = await getVersion()
@@ -89,14 +91,16 @@ export async function fetchRemote(): Promise<void> {
 		}
 	} catch (error) {
 		console.error('Failed to fetch remote releases:', error)
-		latestLauncherRelease.value = null
+		latestLauncherReleases.value = null
 		isUpdateAvailable.value = false
 		isUpdateInstalling.value = false
 	}
 }
 
-export async function downloadLatestRelease(): Promise<boolean> {
-	if (!latestLauncherRelease.value) {
+export async function downloadLatestRelease(
+	selectedInstaller?: LauncherReleaseAsset | null,
+): Promise<boolean> {
+	if (!latestLauncherReleases.value) {
 		return false
 	}
 
@@ -104,7 +108,7 @@ export async function downloadLatestRelease(): Promise<boolean> {
 		currentOS.value = (await getOS()).toLowerCase()
 	}
 
-	const installer = getInstaller(resolveOperationalSystemExtension(), latestLauncherRelease.value.assets)
+	const installer = selectedInstaller ?? null
 	if (isDeveloper) {
 		console.debug(installer)
 	}
@@ -119,43 +123,51 @@ export async function downloadLatestRelease(): Promise<boolean> {
 			installer.browser_download_url,
 			installer.name,
 			currentOS.value,
-			true,
 		)
 	} finally {
 		isUpdateInstalling.value = false
 	}
 }
 
-function getInstaller(
-	osExtensions: string[],
-	builds: LauncherReleaseAsset[],
-): LauncherReleaseAsset | null {
-	for (const build of builds) {
-		if (blacklistBeginPrefixes.some((prefix) => build.name.startsWith(prefix))) {
-			continue
-		}
-
-		if (osExtensions.some((extension) => build.name.endsWith(extension))) {
-			if (isDeveloper) {
-				console.debug(build.name, build.browser_download_url)
-			}
-			return build
-		}
+export function getAvailableInstallers(): LauncherReleaseAsset[] {
+	if (!latestLauncherReleases.value) {
+		return []
 	}
 
-	return null
+	return getInstallers(resolveOperationalSystemExtension(), latestLauncherReleases.value.assets)
+}
+
+function getInstallers(os: string[], builds: LauncherReleaseAsset[]): LauncherReleaseAsset[] {
+	return builds.filter((build) => {
+		if (blacklistBeginPrefixes.some((prefix) => build.name.startsWith(prefix))) {
+			return false
+		}
+
+		const matchesExtension = os.some((extension) => build.name.endsWith(extension))
+		if (matchesExtension && isDeveloper) {
+			console.debug(build.name, build.browser_download_url)
+		}
+
+		return matchesExtension
+	})
 }
 
 function resolveOperationalSystemExtension(): string[] {
-	if (currentOS.value === 'macos') {
-		return osExtensions["macos"]
+	try {
+		switch (currentOS.value) {
+			case 'macos':
+				return osExtensions.macos
+			case 'windows':
+				return osExtensions.windows
+			case 'linux':
+				return osExtensions.linux
+			default:
+				throw new Error(String("Operational System can't be resolved"))
+		}
+	} catch (error) {
+		console.error("Operational System can't be resolved")
+		return []
 	}
-
-	if (currentOS.value === 'linux') {
-		return osExtensions["linux"]
-	}
-
-	return osExtensions["windows"]
 }
 
 function normalizeVersion(version: string): string {

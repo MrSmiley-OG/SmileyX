@@ -4,11 +4,12 @@ use tokio::fs::File as AsyncFile;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
+const EMPTY_OPEN_ARGS: &[&str] = &[];
+
 pub(crate) async fn get_resource(
     download_url: &str,
     local_filename: &str,
     os_type: &str,
-    auto_update_supported: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let download_dir = dirs::download_dir()
         .ok_or("[AR] • Failed to determine download directory")?;
@@ -20,23 +21,23 @@ pub(crate) async fn get_resource(
     dest_file.write_all(&bytes).await?;
     tracing::info!("[AR] • File downloaded to: {:?}", full_path);
 
-    if auto_update_supported {
-        let result = match os_type.to_lowercase().as_str() {
-            "windows" => handle_windows_file(&full_path).await,
-            "macos" => open_macos_file(&full_path).await,
-            _ => open_default(&full_path).await,
-        };
+    let result = match os_type.to_lowercase().as_str() {
+        "windows" => handle_windows_file(&full_path).await,
+        "macos" => open_macos_file(&full_path).await,
+        _ => open_default(&full_path).await,
+    };
 
-        match result {
-            Ok(_) => tracing::info!("[AR] • File opened successfully!"),
-            Err(e) => tracing::info!("[AR] • Failed to open file: {e}"),
-        }
+    match result {
+        Ok(_) => tracing::info!("[AR] • File opened successfully!"),
+        Err(e) => tracing::info!("[AR] • Failed to open file: {e}"),
     }
 
     Ok(())
 }
 
-async fn handle_windows_file(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+async fn handle_windows_file(
+    path: &PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
     let filename = path
         .file_name()
         .and_then(|f| f.to_str())
@@ -51,7 +52,9 @@ async fn handle_windows_file(path: &PathBuf) -> Result<(), Box<dyn std::error::E
     }
 }
 
-async fn run_windows_installer(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+async fn run_windows_installer(
+    path: &PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
     let installer_path = path.to_str().unwrap_or_default();
 
     let status = if installer_path.ends_with(".msi") {
@@ -76,21 +79,15 @@ async fn run_windows_installer(path: &PathBuf) -> Result<(), Box<dyn std::error:
     }
 }
 
-async fn open_windows_folder(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-    let folder = path.parent().unwrap_or(path);
-    let status = Command::new("explorer")
-        .arg(folder.display().to_string())
-        .status()
-        .await?;
-
-    if !status.success() {
-        Err(format!("Exit code: {:?}", status.code()).into())
-    } else {
-        Ok(())
-    }
+async fn open_windows_folder(
+    path: &PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
+    open_in_file_manager(path, &[("explorer", EMPTY_OPEN_ARGS)]).await
 }
 
-async fn open_macos_file(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+async fn open_macos_file(
+    path: &PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
     let status = Command::new("open")
         .arg(path.to_str().unwrap_or_default())
         .status()
@@ -103,15 +100,49 @@ async fn open_macos_file(path: &PathBuf) -> Result<(), Box<dyn std::error::Error
     }
 }
 
-async fn open_default(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-    let status = Command::new(".")
-        .arg(path.to_str().unwrap_or_default())
-        .status()
-        .await?;
+async fn open_default(
+    path: &PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
+    open_in_file_manager(
+        path,
+        &[
+            ("xdg-open", EMPTY_OPEN_ARGS),
+            ("gio", &["open"]),
+            ("kioclient5", &["exec"]),
+            ("kioclient", &["exec"]),
+            ("kde-open", EMPTY_OPEN_ARGS),
+        ],
+    )
+    .await
+}
 
-    if !status.success() {
-        Err(format!("Exit code: {:?}", status.code()).into())
-    } else {
-        Ok(())
+async fn open_in_file_manager(
+    path: &PathBuf,
+    commands: &[(&str, &[&str])],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let folder = path.parent().unwrap_or(path);
+    let folder_path = folder.to_str().unwrap_or_default();
+    let mut last_error = None;
+
+    for (command, args) in commands {
+        let mut process = Command::new(command);
+        process.args(*args).arg(folder_path);
+
+        match process.status().await {
+            Ok(status) if status.success() => return Ok(()),
+            Ok(status) => {
+                last_error = Some(format!(
+                    "{command} exited with code {:?}",
+                    status.code()
+                ));
+            }
+            Err(error) => {
+                last_error = Some(format!("{command} failed: {error}"));
+            }
+        }
     }
+
+    Err(last_error
+        .unwrap_or_else(|| "No file manager command succeeded".to_string())
+        .into())
 }

@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { Button, defineMessages, useVIntl } from '@modrinth/ui'
-import { computed, ref } from 'vue'
+import { Button, Combobox, defineMessages, useVIntl } from '@modrinth/ui'
+import { computed, ref, watch } from 'vue'
 
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import {
 	downloadLatestRelease,
+	getAvailableInstallers,
 	isUpdateInstalling,
 	LAUNCHER_RELEASES_URL,
 	LAUNCHER_REPOSITORY_URL,
-	latestLauncherRelease,
+	latestLauncherReleases,
 } from '@/helpers/astralrinth/update'
 
 type ModalHandle = {
@@ -24,9 +25,17 @@ const { formatMessage } = useVIntl()
 
 const updateModalView = ref<ModalHandle | null>(null)
 const updateRequestFailView = ref<ModalHandle | null>(null)
+const selectedInstallerName = ref<string | null>(null)
 
-const releaseTag = computed(() => latestLauncherRelease.value?.tag_name ?? '')
-const releaseTitle = computed(() => latestLauncherRelease.value?.name ?? '')
+const releaseTag = computed(() => latestLauncherReleases.value?.tag_name ?? '')
+const releaseTitle = computed(() => latestLauncherReleases.value?.name ?? '')
+const availableInstallers = computed(() => getAvailableInstallers())
+const selectedInstaller = computed(
+	() =>
+		availableInstallers.value.find((installer) => installer.name === selectedInstallerName.value) ??
+		null,
+)
+const selectedInstallerUrl = computed(() => selectedInstaller.value?.browser_download_url ?? null)
 
 const messages = defineMessages({
 	updateHeader: {
@@ -63,6 +72,18 @@ const messages = defineMessages({
 		id: 'astralrinth.app.launcher-update-modal.update.notice-outro',
 		defaultMessage: 'To avoid data loss, keep a backup copy in a safe place before continuing.',
 	},
+	installerTitle: {
+		id: 'astralrinth.app.launcher-update-modal.update.installer-title',
+		defaultMessage: 'Installer type',
+	},
+	installerDescription: {
+		id: 'astralrinth.app.launcher-update-modal.update.installer-description',
+		defaultMessage: 'Choose the installer package you want to continue with.',
+	},
+	selectInstaller: {
+		id: 'astralrinth.app.launcher-update-modal.update.select-installer',
+		defaultMessage: 'Select an installer',
+	},
 	latestReleaseTag: {
 		id: 'astralrinth.app.launcher-update-modal.update.latest-release-tag',
 		defaultMessage: '☁️ Latest release tag:',
@@ -85,7 +106,7 @@ const messages = defineMessages({
 	},
 	downloadAction: {
 		id: 'astralrinth.app.launcher-update-modal.update.download-action',
-		defaultMessage: 'Download update and close',
+		defaultMessage: 'Download update',
 	},
 	errorHeader: {
 		id: 'astralrinth.app.launcher-update-modal.error.header',
@@ -121,13 +142,29 @@ const messages = defineMessages({
 	},
 })
 
+watch(
+	availableInstallers,
+	(installers) => {
+		const hasSelectedInstaller = installers.some(
+			(installer) => installer.name === selectedInstallerName.value,
+		)
+
+		if (hasSelectedInstaller) {
+			return
+		}
+
+		selectedInstallerName.value = installers.length === 1 ? installers[0].name : null
+	},
+	{ immediate: true },
+)
+
 async function show() {
 	updateModalView.value?.show()
 }
 
 async function initDownload() {
 	updateModalView.value?.hide()
-	const result = await downloadLatestRelease()
+	const result = await downloadLatestRelease(selectedInstaller.value)
 
 	if (!result) {
 		updateRequestFailView.value?.show()
@@ -197,11 +234,37 @@ defineExpose({
 				</a>
 			</div>
 
+			<div class="space-y-2 rounded-2xl border border-solid border-[rgba(255,255,255,0.12)] p-3">
+				<div>
+					<p class="m-0 text-base">
+						<strong>{{ formatMessage(messages.installerTitle) }}</strong>
+					</p>
+					<p class="m-0 text-secondary text-sm">
+						{{ formatMessage(messages.installerDescription) }}
+					</p>
+				</div>
+				<Combobox
+					v-model="selectedInstallerName"
+					name="AstralRinth launcher installer"
+					:options="
+						availableInstallers.map((installer) => ({
+							value: installer.name,
+							label: installer.name,
+						}))
+					"
+					:display-value="selectedInstallerName ?? formatMessage(messages.selectInstaller)"
+				/>
+			</div>
+
 			<div class="absolute bottom-4 right-4 flex items-center gap-4 neon-button neon">
 				<Button class="bordered" @click="updateModalView?.hide()">
 					{{ formatMessage(messages.cancelAction) }}
 				</Button>
-				<Button class="bordered" :disabled="isUpdateInstalling" @click="initDownload()">
+				<Button
+					class="bordered"
+					:disabled="isUpdateInstalling || !selectedInstallerUrl"
+					@click="initDownload()"
+				>
 					{{ formatMessage(messages.downloadAction) }}
 				</Button>
 			</div>
@@ -215,7 +278,9 @@ defineExpose({
 	>
 		<div class="space-y-3 pb-16">
 			<div class="space-y-2 rounded-2xl border border-solid border-[rgba(255,255,255,0.12)] p-3">
-				<p><strong>{{ formatMessage(messages.errorTitle) }}</strong></p>
+				<p>
+					<strong>{{ formatMessage(messages.errorTitle) }}</strong>
+				</p>
 				<p class="m-0 text-secondary">{{ formatMessage(messages.errorDescription) }}</p>
 				<p class="m-0 text-sm">
 					{{ formatMessage(messages.errorHelpText) }}
@@ -231,7 +296,9 @@ defineExpose({
 				</p>
 			</div>
 
-			<div class="rounded-2xl border border-solid border-[rgba(255,255,255,0.12)] p-3 text-sm text-secondary">
+			<div
+				class="rounded-2xl border border-solid border-[rgba(255,255,255,0.12)] p-3 text-sm text-secondary"
+			>
 				<p class="m-0">
 					<strong>{{ formatMessage(messages.localVersion) }}</strong>
 					<span class="neon-text">v{{ props.version }}</span>
