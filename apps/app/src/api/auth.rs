@@ -113,7 +113,7 @@ pub async fn login<R: Runtime>(
             },
         )?),
     )
-    .title("Sign into Modrinth")
+    .title("Sign into AstralRinth")
     .always_on_top(true)
     .center()
     .build()?;
