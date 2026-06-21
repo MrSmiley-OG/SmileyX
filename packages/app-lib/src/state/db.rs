@@ -6,8 +6,6 @@ use sqlx::{Pool, Sqlite};
 use std::str::FromStr;
 use std::time::Duration;
 
-static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
-
 pub(crate) async fn connect(
     app_identifier: &str,
 ) -> crate::Result<Pool<Sqlite>> {
@@ -34,8 +32,19 @@ pub(crate) async fn connect(
         .connect_with(conn_options)
         .await?;
 
-    MIGRATOR.run(&pool).await?;
-    stale_data_cleanup(&pool).await?;
+    if let Err(err) = stale_data_cleanup(&pool).await {
+        tracing::warn!(
+            "Failed to clean up stale data from state database before migrations: {err}"
+        );
+    }
+
+    sqlx::migrate!().run(&pool).await?;
+
+    if let Err(err) = stale_data_cleanup(&pool).await {
+        tracing::warn!(
+            "Failed to clean up stale data from state database: {err}"
+        );
+    }
 
     Ok(pool)
 }
@@ -46,11 +55,20 @@ pub(crate) async fn connect(
 async fn stale_data_cleanup(pool: &Pool<Sqlite>) -> crate::Result<()> {
     let mut tx = pool.begin().await?;
 
-    sqlx::query!(
-        "DELETE FROM custom_minecraft_skins WHERE minecraft_user_uuid NOT IN (SELECT uuid FROM minecraft_users)"
+    let has_skin_tables = sqlx::query!(
+        "SELECT COUNT(*) AS \"count!: i64\" FROM sqlite_master WHERE type = 'table' AND name IN ('custom_minecraft_skins', 'minecraft_users')",
     )
-    .execute(&mut *tx)
-    .await?;
+    .fetch_one(&mut *tx)
+    .await?
+    .count == 2;
+
+    if has_skin_tables {
+        sqlx::query!(
+            "DELETE FROM custom_minecraft_skins WHERE minecraft_user_uuid NOT IN (SELECT uuid FROM minecraft_users)"
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
 
     tx.commit().await?;
 
