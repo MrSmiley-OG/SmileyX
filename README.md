@@ -3,6 +3,7 @@
 - [🔧 Install Instructions](#install-instructions)
 - [✨ Features](#features)
 - [🚀 Getting Started](#getting-started)
+- [🛠️ Разработка](#development)
 - [⚠️ Disclaimer](#disclaimer)
 - [💰 Donate](#support-our-project-crypto-wallets)
 
@@ -100,6 +101,20 @@ To begin using AstralRinth:
    - Start Minecraft from the launcher.
    - The launcher will auto-detect the recommended JVM version.
    - You can also configure Java manually in the settings.
+
+---
+
+# Development
+
+Before continue you need to install `mise` tool for easy install libraries and running application on any OS (Windows, macOS, Linux)
+
+1. `mise activate`
+2. `mise install`
+3. `mise exec rust -- rustup toolchain install stable`
+4. `mise exec pnpm -- pnpm install`
+5. `mise exec rust -- cargo install tauri-cli --version "^2.5.0"`
+6. `mise exec pnpm -- pnpm app:dev` — Development (unoptimized)
+7. `mise exec pnpm -- pnpm app:build` — Production
 
 ---
 
