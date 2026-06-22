@@ -54,7 +54,11 @@ body:
     attributes:
       label: AstralRinth version
       description: Specify the launcher version, tag, or build name you are using.
-      placeholder: v1.2.3 / nightly / dirty-dev ...
+      options:
+        - Git Astralium (You're here)
+        - Telegram
+        - Black Minecraft
+        - External web resource (Other)
     validations:
       required: true
 
