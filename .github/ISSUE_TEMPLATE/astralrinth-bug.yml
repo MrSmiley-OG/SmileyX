@@ -54,20 +54,20 @@ body:
     attributes:
       label: AstralRinth version
       description: Specify the launcher version, tag, or build name you are using.
+      placeholder: "Example: v0.14.801, v0.14.902 ..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-source
+    attributes:
+      label: Installation source
+      description: Where did you get this build from?
       options:
         - Git Astralium (You're here)
         - Telegram
         - Black Minecraft
         - External web resource (Other)
-    validations:
-      required: true
-
-  - type: input
-    id: install-source
-    attributes:
-      label: Installation source
-      description: Where did you get this build from?
-      placeholder: GitAstralium release page / local build / other source
     validations:
       required: true
 
