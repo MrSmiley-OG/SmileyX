@@ -29,7 +29,7 @@ const errorCollapsed = ref(false)
 
 const title = ref('An error occurred')
 const errorType = ref('unknown')
-const supportLink = ref('https://astralium.su/product/astralrinth/support')
+const supportLink = ref('https://xorison.dev/product/astralrinth/support')
 const metadata = ref({})
 
 defineExpose({

@@ -133,7 +133,7 @@ pub async fn get_elyby_injector_library() -> Result<PathBuf> {
 async fn extract_metadata_from_elyby_file(
     file_name: &str,
 ) -> Result<(String, String)> {
-    const URL: &str = "https://git.astralium.su/api/v1/repos/didirus/ElyIntegration/releases/latest";
+    const URL: &str = "https://git.xorison.dev/api/v1/repos/didirus/ElyIntegration/releases/latest";
 
     let response = reqwest::get(URL).await.map_err(|e| {
         tracing::error!(

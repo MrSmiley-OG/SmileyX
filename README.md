@@ -11,7 +11,7 @@
 > [Русский](readme/ru_ru/README.md)
 
 ## Support channel
-> [Telegram](https://astralium.su/product/astralrinth/support)
+> [Telegram](https://xorison.dev/product/astralrinth/support)
 
 ---
 
@@ -31,7 +31,7 @@
 
 To install the launcher:
 
-1. Visit the [releases page](https://astralium.su/product/astralrinth/source) to download the correct version for your system.
+1. Visit the [releases page](https://xorison.dev/product/astralrinth/source) to download the correct version for your system.
 2. Run the downloaded file or extract and launch it, depending on the format.
 
 ### Downloadable File Extensions
@@ -89,7 +89,7 @@ To begin using AstralRinth:
 
 1. **Download Latest Release**
 
-   - Go to the [releases page](https://astralium.su/product/astralrinth)
+   - Go to the [releases page](https://xorison.dev/product/astralrinth)
    - [How to choose a file](#downloadable-file-extensions)
    - [How to choose a release](#installation-warnings)
 
