@@ -72,6 +72,7 @@ import FriendsList from '@/components/ui/friends/FriendsList.vue'
 import AddServerToInstanceModal from '@/components/ui/install_flow/AddServerToInstanceModal.vue'
 import UnknownPackWarningModal from '@/components/ui/install_flow/UnknownPackWarningModal.vue'
 import MinecraftAuthErrorModal from '@/components/ui/minecraft-auth-error-modal/MinecraftAuthErrorModal.vue'
+import MinecraftRequiredModal from '@/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue'
 import AppSettingsModal from '@/components/ui/modal/AppSettingsModal.vue'
 import AuthGrantFlowWaitModal from '@/components/ui/modal/AuthGrantFlowWaitModal.vue'
 import InstallToPlayModal from '@/components/ui/modal/InstallToPlayModal.vue'
@@ -175,6 +176,8 @@ const { handleError, addNotification } = notificationManager
 const popupNotificationManager = new AppPopupNotificationManager()
 providePopupNotificationManager(popupNotificationManager)
 const { addPopupNotification } = popupNotificationManager
+let adsConsentPopupId = null
+let unlistenAdsConsent
 
 const settingsModal = ref(null)
 
@@ -206,6 +209,16 @@ const { data: authenticatedModrinthUser } = useQuery({
 	enabled: () => !!credentials.value?.session,
 	retry: false,
 })
+const hasPlus = computed(
+	() =>
+		!!credentials.value?.user &&
+		(hasMidasBadge(credentials.value.user) ||
+			hasActivePride26Midas(authenticatedModrinthUser.value?.campaigns?.pride_26)),
+)
+const showAd = computed(
+	() => sidebarVisible.value && !hasPlus.value && credentials.value !== undefined,
+)
+const adConsentAvailable = computed(() => credentials.value !== undefined && !hasPlus.value)
 providePageContext({
 	hierarchicalSidebarAvailable: ref(true),
 	floatingActionBarOffsets: {
@@ -338,6 +351,27 @@ const messages = defineMessages({
 		id: 'astralrinth.app.launcher-update.available.action',
 		defaultMessage: 'View update',
 	},
+	adsConsentTitle: {
+		id: 'app.ads-consent.title',
+		defaultMessage: 'Your privacy and how ads support Modrinth',
+	},
+	adsConsentBody: {
+		id: 'app.ads-consent.body',
+		defaultMessage:
+			'Ads make Modrinth possible and fund creator payouts. Our partners may store or access cookies in the app to personalize ads and measure performance.',
+	},
+	adsConsentManage: {
+		id: 'app.ads-consent.manage',
+		defaultMessage: 'Manage preferences',
+	},
+	adsConsentReject: {
+		id: 'app.ads-consent.reject',
+		defaultMessage: 'Reject all',
+	},
+	adsConsentAccept: {
+		id: 'app.ads-consent.accept',
+		defaultMessage: 'Accept all',
+	},
 })
 
 // This code line modified by AstralRinth
@@ -355,7 +389,6 @@ function shouldHideNewsArticle(article) {
 	return filteredNewsPhrases.some((phrase) => haystack.includes(phrase.toLowerCase()))
 }
 
-// This code is modified by AstralRinth
 async function setupApp() {
 	// This code line modified by AstralRinth
 	const settings = await getSettings()
@@ -433,7 +466,7 @@ async function setupApp() {
 		addNotification({
 			title: 'Warning',
 			text: e.message,
-			type: 'warn',
+			type: 'warning',
 		}),
 	)
 
@@ -623,6 +656,7 @@ watch(stateInitialized, (ready) => {
 const error = useError()
 const errorModal = ref()
 const minecraftAuthErrorModal = ref()
+const minecraftRequiredModal = ref()
 
 const contentInstall = createContentInstall({ router, handleError })
 provideContentInstall(contentInstall)
@@ -738,9 +772,6 @@ async function logOut() {
 	await fetchCredentials()
 }
 
-// This code line modified by AstralRinth
-const hasPlus = computed(() => !!credentials.value?.user)
-
 async function fetchIntercomToken() {
 	const creds = await getCreds()
 	if (!creds?.session) {
@@ -772,6 +803,7 @@ onMounted(() => {
 
 	error.setErrorModal(errorModal.value)
 	error.setMinecraftAuthErrorModal(minecraftAuthErrorModal.value)
+	error.setMinecraftRequiredModal(minecraftRequiredModal.value)
 
 	setContentIncompatibilityWarningModal(incompatibilityWarningModal.value)
 	setContentInstallModal(modInstallModal.value)
@@ -874,12 +906,13 @@ async function handleCommand(e) {
 		if (e.path.endsWith('.mrpack')) {
 			const location = { type: 'fromFile', path: e.path }
 			const preview = await install_get_modpack_preview(location).catch(handleError)
-			if (preview?.unknownFile) {
+			if (preview?.unknownFile || preview?.externalFilesInModpack.length > 0) {
 				const splitPath = e.path.split(/[\\/]/)
 				const fileName = splitPath ? splitPath[splitPath.length - 1] : e.path
 				unknownPackWarningModal.value?.show(
 					() => install_create_modpack_instance(location).then(() => undefined),
 					fileName,
+					preview.externalFilesInModpack,
 				)
 			} else {
 				await install_create_modpack_instance(location).catch(handleError)
@@ -1394,6 +1427,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	<PopupNotificationPanel :has-sidebar="sidebarVisible" />
 	<ErrorModal ref="errorModal" />
 	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />
+	<MinecraftRequiredModal ref="minecraftRequiredModal" />
 	<ContentInstallModal
 		ref="modInstallModal"
 		:instances="contentInstallInstances"
@@ -1437,8 +1471,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 		@create-anyway="handleContentInstallModpackDuplicateCreateAnyway"
 		@go-to-instance="handleContentInstallModpackDuplicateGoToInstance"
 	/>
-	<InstallToPlayModal ref="installToPlayModal" />
-	<UpdateToPlayModal ref="updateToPlayModal" />
+	<InstallToPlayModal ref="installToPlayModal" :show-external-warnings="false" />
+	<UpdateToPlayModal ref="updateToPlayModal" :show-external-warnings="false" />
 </template>
 
 <style lang="scss" scoped>

@@ -31,7 +31,7 @@
 					<div
 						v-if="!hideHeader"
 						data-tauri-drag-region
-						class="grid grid-cols-[auto_min-content] items-center gap-4 p-6 border-solid border-0 border-b-[1px] border-surface-5 max-w-full"
+						class="grid grid-cols-[1fr_auto] items-center gap-4 p-6 border-solid border-0 border-b-[1px] border-surface-5 max-w-full"
 					>
 						<div class="flex text-wrap break-words items-center gap-3 min-w-0">
 							<slot name="title">
@@ -40,16 +40,19 @@
 								</span>
 							</slot>
 						</div>
-						<ButtonStyled v-if="closable" circular>
-							<button
-								v-tooltip="closeLabel"
-								:aria-label="closeLabel"
-								:disabled="disableClose"
-								@click="hide"
-							>
-								<XIcon aria-hidden="true" />
-							</button>
-						</ButtonStyled>
+						<div class="flex items-center gap-2">
+							<slot name="header-actions" />
+							<ButtonStyled v-if="closable" circular>
+								<button
+									v-tooltip="closeLabel"
+									:aria-label="closeLabel"
+									:disabled="disableClose"
+									@click="hide"
+								>
+									<XIcon aria-hidden="true" />
+								</button>
+							</ButtonStyled>
+						</div>
 					</div>
 
 					<ButtonStyled
@@ -170,6 +173,7 @@ const props = withDefaults(
 		header?: string
 		hideHeader?: boolean
 		onHide?: () => void
+		onAfterHide?: () => void
 		onShow?: () => void
 		mergeHeader?: boolean
 		scrollable?: boolean
@@ -196,6 +200,7 @@ const props = withDefaults(
 		header: undefined,
 		hideHeader: false,
 		onHide: () => {},
+		onAfterHide: () => {},
 		onShow: () => {},
 		mergeHeader: false,
 		// TODO: migrate all modals to use scrollable and remove this prop
@@ -289,6 +294,7 @@ function hide() {
 	previousFocusEl = null
 	setTimeout(() => {
 		open.value = false
+		nextTick(() => props.onAfterHide?.())
 	}, 300)
 }
 
