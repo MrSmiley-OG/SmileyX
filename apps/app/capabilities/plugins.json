@@ -25,6 +25,18 @@
 			"identifier": "http:default",
 			"allow": [
 				{
+					"url": "https://xorison.dev/*"
+				},
+				{
+					"url": "https://*.xorison.dev/*"
+				},
+				{
+					"url": "https://astralium.su/*"
+				},
+				{
+					"url": "https://*.astralium.su/*"
+				},
+				{
 					"url": "https://modrinth.com/*"
 				},
 				{

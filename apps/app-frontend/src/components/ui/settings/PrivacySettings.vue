@@ -10,7 +10,6 @@ import {
 } from '@modrinth/ui'
 import { ref, watch } from 'vue'
 
-import { open_ads_consent_preferences } from '@/helpers/ads.js'
 import { optInAnalytics, optOutAnalytics } from '@/helpers/analytics'
 import { get, set } from '@/helpers/settings.ts'
 

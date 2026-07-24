@@ -1,5 +1,6 @@
 import { getVersion } from '@tauri-apps/api/app'
 import { ref } from 'vue'
+import { fetch } from '@tauri-apps/plugin-http'
 
 import { getOS, initUpdateLauncher, isDev } from '@/helpers/utils.js'
 
