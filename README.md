@@ -130,5 +130,8 @@ Before continue you need to install `mise` tool for easy install libraries and r
 
 If you'd like to support development, you can donate via the following crypto wallets:
 
-- Toncoin (TON): UQA5pGOJhIz9UAVEOh5t2ur1QVbNr_FC1eq9bOb3GwTgaiqk
-- USDT (TON): UQA5pGOJhIz9UAVEOh5t2ur1QVbNr_FC1eq9bOb3GwTgaiqk
+- LTC : LNG22z7NS4UDCM3AvNszgy6v9kNiGGo5rE
+- TRC20 : TNJxNQTXu7h2TnHgFWUDDBBVTZU4UctpiJ
+- BTC : 1HhzjRvDrZ4g1C77YfEbTCziQ5uWWXWYqn
+- ETH : 0xc3abea7e04683f80f273a630e34dd10f2d51dd42
+- TRX : TNJxNQTXu7h2TnHgFWUDDBBVTZU4UctpiJ
