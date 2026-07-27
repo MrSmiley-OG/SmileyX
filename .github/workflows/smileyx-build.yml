@@ -13,7 +13,7 @@ on:
       - release-*
       - beta-*
     paths:
-      - .github/workflows/astralrinth-build.yml
+      - .github/workflows/smileyx-build.yml
       - 'apps/app/**'
       - 'apps/app-frontend/**'
       - 'packages/app-lib/**'
@@ -30,7 +30,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: astralrinth-build-${{ github.ref }}
+  group: smileyx-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -45,27 +45,27 @@ jobs:
             label: 🐧 Linux x86_64 Build
             target: x86_64-unknown-linux-gnu
             rust_targets: x86_64-unknown-linux-gnu
-            artifact_name: astralrinth-bundle-linux-x86_64
+            artifact_name: smileyx-bundle-linux-x86_64
           - runner: windows-latest
             label: 🪟 Windows x86_64 Build
             target: x86_64-pc-windows-msvc
             rust_targets: x86_64-pc-windows-msvc
-            artifact_name: astralrinth-bundle-windows-x86_64
+            artifact_name: smileyx-bundle-windows-x86_64
           - runner: windows-latest
             label: 🪟 Windows aarch64 Build
             target: aarch64-pc-windows-msvc
             rust_targets: aarch64-pc-windows-msvc
-            artifact_name: astralrinth-bundle-windows-aarch64
+            artifact_name: smileyx-bundle-windows-aarch64
           - runner: macos-latest
             label: 🍎 macOS x86_64 Build
             target: x86_64-apple-darwin
             rust_targets: x86_64-apple-darwin
-            artifact_name: astralrinth-bundle-macos-x86_64
+            artifact_name: smileyx-bundle-macos-x86_64
           - runner: macos-latest
             label: 🍎 macOS aarch64 Build
             target: aarch64-apple-darwin
             rust_targets: aarch64-apple-darwin
-            artifact_name: astralrinth-bundle-macos-aarch64
+            artifact_name: smileyx-bundle-macos-aarch64
 
     env:
       CI: true

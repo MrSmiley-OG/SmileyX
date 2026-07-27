@@ -200,7 +200,7 @@ pub struct WarningPayload {
     pub message: String,
 }
 
-// This code is modified by AstralRinth
+// This code is modified by SmileyX
 #[derive(Serialize, Clone)]
 #[cfg(feature = "tauri")]
 pub struct InfoPayload {

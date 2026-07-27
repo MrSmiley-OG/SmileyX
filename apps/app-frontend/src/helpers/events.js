@@ -108,7 +108,7 @@ export async function warning_listener(callback) {
 	return await listen('warning', (event) => callback(event.payload))
 }
 
-// This code function modified by AstralRinth
+// This code function modified by SmileyX
 export async function info_listener(callback) {
 	return await listen('info', (event) => callback(event.payload))
 }

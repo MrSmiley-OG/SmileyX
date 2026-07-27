@@ -179,7 +179,7 @@ pub async fn emit_warning(message: &str) -> crate::Result<()> {
     Ok(())
 }
 
-// This code is modified by AstralRinth
+// This code is modified by SmileyX
 // emit_info(message)
 pub async fn emit_info(message: &str) -> crate::Result<()> {
     #[cfg(feature = "tauri")]

@@ -113,8 +113,8 @@ import { get_available_capes, get_available_skins } from './helpers/skins'
 import { AppNotificationManager } from './providers/app-notifications'
 import { AppPopupNotificationManager } from './providers/app-popup-notifications'
 
-// This code line modified by AstralRinth
-import { fetchRemote, isUpdateAvailable } from '@/helpers/astralrinth/update'
+// This code line modified by SmileyX
+import { fetchRemote, isUpdateAvailable } from '@/helpers/smileyx/update'
 
 const themeStore = useTheming()
 const router = useRouter()
@@ -122,7 +122,7 @@ const route = useRoute()
 const APP_LEFT_NAV_WIDTH = '4rem'
 const APP_SIDEBAR_WIDTH = 300
 const INTERCOM_BUBBLE_DEFAULT_PADDING = 20
-// This code line modified by AstralRinth
+// This code line modified by SmileyX
 const filteredNewsPhrases = [
 	'LGBT',
 	'LGBTQ',
@@ -296,10 +296,10 @@ const authUnreachable = computed(() => {
 	return false
 })
 
-// This code is modified by AstralRinth
+// This code is modified by SmileyX
 onMounted(async () => {
 	await useCheckDisableMouseover()
-	// This code line modified by AstralRinth
+	// This code line modified by SmileyX
 	await fetchRemote()
 	if (isUpdateAvailable.value) {
 		addPopupNotification({
@@ -340,15 +340,15 @@ const messages = defineMessages({
 			'Minecraft authentication servers may be down right now. Check your internet connection and try again later.',
 	},
 	launcherUpdateAvailableTitle: {
-		id: 'astralrinth.app.launcher-update.available.title',
+		id: 'smileyx.app.launcher-update.available.title',
 		defaultMessage: 'Launcher update available',
 	},
 	launcherUpdateAvailableText: {
-		id: 'astralrinth.app.launcher-update.available.text',
-		defaultMessage: 'New version of AstralRinth is available for download.',
+		id: 'smileyx.app.launcher-update.available.text',
+		defaultMessage: 'New version of SmileyX is available for download.',
 	},
 	launcherUpdateAvailableAction: {
-		id: 'astralrinth.app.launcher-update.available.action',
+		id: 'smileyx.app.launcher-update.available.action',
 		defaultMessage: 'View update',
 	},
 	adsConsentTitle: {
@@ -374,7 +374,7 @@ const messages = defineMessages({
 	},
 })
 
-// This code line modified by AstralRinth
+// This code line modified by SmileyX
 function shouldHideNewsArticle(article) {
 	const haystack = [
 		article?.title,
@@ -390,16 +390,16 @@ function shouldHideNewsArticle(article) {
 }
 
 async function setupApp() {
-	// This code line modified by AstralRinth
+	// This code line modified by SmileyX
 	const settings = await getSettings()
-	// This code line modified by AstralRinth
+	// This code line modified by SmileyX
 	settings.personalized_ads = false
-	// This code line modified by AstralRinth
+	// This code line modified by SmileyX
 	settings.telemetry = false
-	// This code line modified by AstralRinth
+	// This code line modified by SmileyX
 	await setSettings(settings)
-	// This code line modified by AstralRinth
-	console.info('[AstralRinth] Privacy hard-patch applied', {
+	// This code line modified by SmileyX
+	console.info('[SmileyX] Privacy hard-patch applied', {
 		telemetry: settings.telemetry,
 		personalized_ads: settings.personalized_ads,
 	})
@@ -1120,7 +1120,7 @@ async function processPendingSurveys() {
 	}
 }
 
-// This code line modified by AstralRinth
+// This code line modified by SmileyX
 provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this shit line -> SettingsModal will not work.
 </script>
 
@@ -1203,7 +1203,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<PlusIcon />
 			</NavButton>
 			<div class="flex flex-grow"></div>
-			<!-- This code line modified by AstralRinth -->
+			<!-- This code line modified by SmileyX -->
 			<template v-if="isUpdateAvailable">
 				<NavButton
 					class="neon-icon pulse"
@@ -1258,7 +1258,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 		</div>
 		<div data-tauri-drag-region class="app-grid-statusbar bg-bg-raised h-[--top-bar-height] flex">
 			<div data-tauri-drag-region class="flex min-w-0 flex-1 overflow-hidden p-3">
-				<!-- This code line modified by AstralRinth -->
+				<!-- This code line modified by SmileyX -->
 				<!-- <ModrinthAppLogo class="h-full w-auto shrink-0 text-contrast pointer-events-none" /> -->
 				<div data-tauri-drag-region class="flex shrink-0 items-center gap-1 ml-3">
 					<button
@@ -1476,10 +1476,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 </template>
 
 <style lang="scss" scoped>
-// This code line modified by AstralRinth
-@import '../../../packages/assets/styles/astralrinth/neon-icon.scss';
-// This code line modified by AstralRinth
-@import '../../../packages/assets/styles/astralrinth/neon-text.scss';
+// This code line modified by SmileyX
+@import '../../../packages/assets/styles/smileyx/neon-icon.scss';
+// This code line modified by SmileyX
+@import '../../../packages/assets/styles/smileyx/neon-text.scss';
 .app-grid-layout,
 .app-contents {
 	--top-bar-height: 3rem;

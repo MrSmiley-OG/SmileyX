@@ -15,7 +15,7 @@ pub mod server_address;
 pub mod settings;
 pub mod tags;
 pub mod worlds;
-pub mod astralrinth;
+pub mod smileyx;
 
 pub mod data {
     pub use crate::state::{

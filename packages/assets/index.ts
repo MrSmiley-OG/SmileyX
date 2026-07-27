@@ -138,14 +138,14 @@ export const IntercomBubbleIcon = _IntercomBubbleIcon
 export const MinecraftServerIcon = _MinecraftServerIcon
 export const LinuxIcon = _LinuxIcon
 
-// This code is modified by AstralRinth
-import _AstralRinthLogo from './icons/astralrinth/astralrinth-logo.svg?component'
-import _ElyByIcon from './icons/astralrinth/elyby-icon.svg?component'
-import _MicrosoftIcon from './icons/astralrinth/microsoft.svg?component'
-import _OfflineIcon from './icons/astralrinth/offline.svg?component'
+// This code is modified by SmileyX
+import _SmileyXLogo from './icons/smileyx/smileyx-logo.svg?component'
+import _ElyByIcon from './icons/smileyx/elyby-icon.svg?component'
+import _MicrosoftIcon from './icons/smileyx/microsoft.svg?component'
+import _OfflineIcon from './icons/smileyx/offline.svg?component'
 export const OfflineIcon = _OfflineIcon
 export const MicrosoftIcon = _MicrosoftIcon
-export const AstralRinthLogo = _AstralRinthLogo
+export const SmileyXLogo = _SmileyXLogo
 export const ElyByIcon = _ElyByIcon
 
 // Skin Models

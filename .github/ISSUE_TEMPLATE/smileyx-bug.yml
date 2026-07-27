@@ -1,12 +1,12 @@
-name: "🐞 AstralRinth Bug Report"
-description: Report a bug specific to the AstralRinth fork, launcher, or fork integrations.
-labels: [bug, astralrinth]
+name: "🐞 SmileyX Bug Report"
+description: Report a bug specific to the SmileyX fork, launcher, or fork integrations.
+labels: [bug, smileyx]
 type: bug
 body:
   - type: markdown
     attributes:
       value: |
-        Use this form only for issues specific to AstralRinth.
+        Use this form only for issues specific to SmileyX.
         If the problem is upstream Modrinth behavior and not caused by this fork, mention that clearly in the description.
 
   - type: checkboxes
@@ -16,9 +16,9 @@ body:
       options:
         - label: I checked the existing issues for duplicates
           required: true
-        - label: I reproduced this on the latest AstralRinth build available to me
+        - label: I reproduced this on the latest SmileyX build available to me
           required: true
-        - label: I understand this tracker is for AstralRinth-specific issues, not general Modrinth support
+        - label: I understand this tracker is for SmileyX-specific issues, not general Modrinth support
           required: true
 
   - type: dropdown
@@ -52,7 +52,7 @@ body:
   - type: input
     id: app-version
     attributes:
-      label: AstralRinth version
+      label: SmileyX version
       description: Specify the launcher version, tag, or build name you are using.
       placeholder: "Example: v0.14.801, v0.14.902 ..."
     validations:
@@ -88,7 +88,7 @@ body:
     id: bug-description
     attributes:
       label: What happened?
-      description: Describe the actual problem. Include visible errors, broken behavior, and what makes this AstralRinth-specific.
+      description: Describe the actual problem. Include visible errors, broken behavior, and what makes this SmileyX-specific.
       placeholder: "Example: The launcher closes after selecting an offline account and pressing Play..."
     validations:
       required: true
@@ -106,7 +106,7 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. Open AstralRinth
+        1. Open SmileyX
         2. Add an offline account
         3. Open an instance
         4. Press Play

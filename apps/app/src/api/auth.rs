@@ -21,7 +21,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .build()
 }
 
-/// This code is modified by AstralRinth
+/// This code is modified by SmileyX
 /// Create new offline user
 #[tauri::command]
 pub async fn offline_login(name: &str) -> Result<Credentials> {
@@ -29,7 +29,7 @@ pub async fn offline_login(name: &str) -> Result<Credentials> {
     Ok(credentials)
 }
 
-/// This code is modified by AstralRinth
+/// This code is modified by SmileyX
 /// Create new Ely.by user
 #[tauri::command]
 pub async fn elyby_login(
@@ -41,7 +41,7 @@ pub async fn elyby_login(
     Ok(credentials)
 }
 
-/// This code is modified by AstralRinth
+/// This code is modified by SmileyX
 /// Authenticate Ely.by user
 #[tauri::command]
 pub async fn elyby_auth_authenticate(
@@ -113,7 +113,7 @@ pub async fn login<R: Runtime>(
             },
         )?),
     )
-    .title("Sign into AstralRinth")
+    .title("Sign into SmileyX")
     .always_on_top(true)
     .center()
     .build()?;

@@ -4,3 +4,10 @@ rustflags = ["-C", "link-args=/STACK:16777220"]
 
 [target.x86_64-pc-windows-msvc]
 linker = "rust-lld"
+
+[env]
+OPENSSL_DIR = "C:\\vcpkg\\installed\\x64-windows"
+OPENSSL_LIB_DIR = "C:\\vcpkg\\installed\\x64-windows\\lib"
+OPENSSL_INCLUDE_DIR = "C:\\vcpkg\\installed\\x64-windows\\include"
+JAVA_HOME = "C:\\Program Files\\Microsoft\\jdk-21.0.11.10-hotspot"
+PATH = "%PATH%;C:\\Program Files\\Microsoft\\jdk-21.0.11.10-hotspot\\bin"

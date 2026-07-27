@@ -1,17 +1,17 @@
-// This code is modified by AstralRinth
+// This code is modified by SmileyX
 use std::{
     sync::{atomic::AtomicBool, Arc},
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use discord_rich_presence::{
-    activity::{Activity, Assets, Timestamps}, // This code is modified by AstralRinth
+    activity::{Activity, Assets, Timestamps}, // This code is modified by SmileyX
     DiscordIpc, DiscordIpcClient,
 };
-use rand::seq::SliceRandom; // This code is modified by AstralRinth
+use rand::seq::SliceRandom; // This code is modified by SmileyX
 use tokio::sync::RwLock;
 
-use crate::util::astralrinth::utils;
+use crate::util::smileyx::utils;
 use crate::State;
 
 pub struct DiscordGuard {

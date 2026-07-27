@@ -20,13 +20,13 @@ use crate::state::{
 };
 use crate::util::rpc::RpcServerBuilder;
 use crate::util::io;
-use crate::util::astralrinth::utils;
+use crate::util::smileyx::utils;
 use crate::{State, get_resource_file, process};
 use chrono::Utc;
 use daedalus as d;
 use daedalus::minecraft::{LoggingSide, RuleAction, VersionInfo};
 use daedalus::modded::{LoaderVersion, Manifest};
-use rand::seq::SliceRandom; // This code is modified by AstralRinth
+use rand::seq::SliceRandom; // This code is modified by SmileyX
 use regex::Regex;
 use serde::Deserialize;
 use std::fmt::Write;
@@ -939,7 +939,7 @@ pub async fn launch_minecraft(
         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
     }
 
-    // This code is modified by AstralRinth
+    // This code is modified by SmileyX
     if credentials.account_type == AccountType::Offline.as_lowercase_str() {
 		// Will be applied only on Vanilla versions
         if version_jar == "1.16.4" || version_jar == "1.16.5" {
@@ -1073,7 +1073,7 @@ pub async fn launch_minecraft(
         }
     }
 
-    // This code is modified by AstralRinth
+    // This code is modified by SmileyX
     let selected_phrase = ACTIVE_STATE.choose(&mut rand::thread_rng()).unwrap();
     let _ = state
         .discord_rpc

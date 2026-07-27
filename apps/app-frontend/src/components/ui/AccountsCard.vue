@@ -11,7 +11,7 @@
 				{{ formatMessage(messages.signInToMinecraft) }}
 			</button>
 		</ButtonStyled>
-		<!-- BEGIN: This code block modified by AstralRinth -->
+		<!-- BEGIN: This code block modified by SmileyX -->
 		<ButtonStyled class="w-full">
 			<OverflowMenu class="w-full justify-between text-left" :options="additionalAccountOptions">
 				<span class="inline-flex items-center gap-2">
@@ -30,7 +30,7 @@
 				</template>
 			</OverflowMenu>
 		</ButtonStyled>
-		<!-- END: This code block modified by AstralRinth -->
+		<!-- END: This code block modified by SmileyX -->
 	</div>
 	<Accordion
 		v-else
@@ -568,11 +568,11 @@ const messages = defineMessages({
 		defaultMessage: 'Add Microsoft account',
 	},
 	addOfflineAccount: {
-		id: 'astralrinth.app.minecraft-account.add-offline-account',
+		id: 'smileyx.app.minecraft-account.add-offline-account',
 		defaultMessage: 'Add offline account',
 	},
 	addElyByAccount: {
-		id: 'astralrinth.app.minecraft-account.add-elyby-account',
+		id: 'smileyx.app.minecraft-account.add-elyby-account',
 		defaultMessage: 'Add Ely.by account',
 	},
 	removeAccount: {

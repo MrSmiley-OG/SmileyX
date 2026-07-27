@@ -62,10 +62,10 @@
 			}
 		]
 	},
-	"productName": "AstralRinth App",
+	"productName": "SmileyX App",
 	"version": "0.15.2001",
-	"mainBinaryName": "AstralRinth App",
-	"identifier": "AstralRinthApp",
+	"mainBinaryName": "SmileyX App",
+	"identifier": "SmileyXApp",
 	"plugins": {
 		"deep-link": {
 			"desktop": {
@@ -86,7 +86,7 @@
 				"fullscreen": false,
 				"height": 800,
 				"resizable": true,
-				"title": "AstralRinth",
+				"title": "SmileyX",
 				"label": "main",
 				"width": 1280,
 				"minHeight": 700,

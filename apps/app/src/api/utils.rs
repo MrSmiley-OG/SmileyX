@@ -30,7 +30,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .build()
 }
 
-// This code function is modified by AstralRinth
+// This code function is modified by SmileyX
 #[tauri::command]
 pub async fn init_update_launcher(
     download_url: &str,

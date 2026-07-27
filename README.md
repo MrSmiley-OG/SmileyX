@@ -17,13 +17,13 @@
 
 # About Project
 
-## **AstralRinth • Empowering Your Minecraft Experience**
+## **SmileyX • Empowering Your Minecraft Experience**
 
-**AstralRinth** — a powerful fork of Modrinth, reimagined to enhance your Minecraft journey. Whether you're a GUI enthusiast or a developer building with Modrinth’s API, **Theseus Core** is your launchpad into a new era of Minecraft gameplay.
+**SmileyX** — a powerful fork of Modrinth, reimagined to enhance your Minecraft journey. Whether you're a GUI enthusiast or a developer building with Modrinth’s API, **Theseus Core** is your launchpad into a new era of Minecraft gameplay.
 
 ## **About the Software**
 
-**AstralRinth** is a dedicated branch of the Modrinth (a.k.a Theseus) project, focused on **offline authentication**, offering you more flexibility and control. Play Minecraft without the need for constant online verification — a user-first approach to modern modded gaming.
+**SmileyX** is a dedicated branch of the Modrinth (a.k.a Theseus) project, focused on **offline authentication**, offering you more flexibility and control. Play Minecraft without the need for constant online verification — a user-first approach to modern modded gaming.
 
 ---
 
@@ -85,7 +85,7 @@ Avoid using builds with these prefixes — they may be unstable or experimental:
 
 # Getting Started
 
-To begin using AstralRinth:
+To begin using SmileyX:
 
 1. **Download Latest Release**
 
@@ -120,7 +120,7 @@ Before continue you need to install `mise` tool for easy install libraries and r
 
 # Disclaimer
 
-- **AstralRinth** is intended **solely for educational and experimental use**.
+- **SmileyX** is intended **solely for educational and experimental use**.
 - We **do not condone piracy** — users are encouraged to purchase a legitimate Minecraft license.
 - Respect all relevant licensing agreements and support Minecraft developers.
 

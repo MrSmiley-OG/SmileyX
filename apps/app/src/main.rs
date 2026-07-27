@@ -39,7 +39,7 @@ async fn initialize_state(app: tauri::AppHandle) -> api::Result<()> {
     app.fs_scope()
         .allow_directory(state.directories.instances_dir(), true)?;
 
-    tracing::info!("AstralRinth state successfully initialized.");
+    tracing::info!("SmileyX state successfully initialized.");
     Ok(())
 }
 
@@ -130,7 +130,7 @@ fn main() {
 
     let _log_guard = theseus::start_logger(&tauri_context.config().identifier);
 
-    tracing::info!("Initialized tracing subscriber. Loading AstralRinth App!");
+    tracing::info!("Initialized tracing subscriber. Loading SmileyX App!");
 
     let mut builder = tauri::Builder::default();
 
@@ -381,7 +381,7 @@ fn main() {
                     DialogBuilder::message()
                         .set_level(MessageLevel::Error)
                         .set_title("Initialization error")
-                        .set_text("Your Microsoft Edge WebView2 installation is corrupt.\n\nMicrosoft Edge WebView2 is required to run AstralRinth App.\n\nLearn how to repair it at https://support.modrinth.com/en/articles/8797765-corrupted-microsoft-edge-webview2-installation")
+                        .set_text("Your Microsoft Edge WebView2 installation is corrupt.\n\nMicrosoft Edge WebView2 is required to run SmileyX App.\n\nLearn how to repair it at https://support.modrinth.com/en/articles/8797765-corrupted-microsoft-edge-webview2-installation")
                         .alert()
                         .show()
                         .unwrap();

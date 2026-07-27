@@ -1,7 +1,7 @@
 ///
-/// This file is modified by AstralRinth
+/// This file is modified by SmileyX
 ///
-use crate::api::astralrinth::update;
+use crate::api::smileyx::update;
 use crate::event::emit::emit_info;
 use crate::{Result, State};
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-	AstralRinthLogo,
+	SmileyXLogo,
 	CoffeeIcon,
 	DownloadIcon,
 	GameIcon,
@@ -25,7 +25,7 @@ import { getVersion } from '@tauri-apps/api/app'
 import { platform as getOsPlatform, version as getOsVersion } from '@tauri-apps/plugin-os'
 import { ref, watch } from 'vue'
 
-import LauncherUpdateModal from '@/components/ui/astralrinth/LauncherUpdateModal.vue'
+import LauncherUpdateModal from '@/components/ui/SmileyX/LauncherUpdateModal.vue'
 import AppearanceSettings from '@/components/ui/settings/AppearanceSettings.vue'
 import DefaultInstanceSettings from '@/components/ui/settings/DefaultInstanceSettings.vue'
 import FeatureFlagSettings from '@/components/ui/settings/FeatureFlagSettings.vue'
@@ -34,7 +34,7 @@ import LanguageSettings from '@/components/ui/settings/LanguageSettings.vue'
 import PrivacySettings from '@/components/ui/settings/PrivacySettings.vue'
 import ResourceManagementSettings from '@/components/ui/settings/ResourceManagementSettings.vue'
 import { get, set } from '@/helpers/settings.ts'
-import { isUpdateInstalling, isUpdateAvailable } from '@/helpers/astralrinth/update'
+import { isUpdateInstalling, isUpdateAvailable } from '@/helpers/smileyx/update'
 import { injectAppUpdateDownloadProgress } from '@/providers/download-progress.ts'
 import { useTheming } from '@/store/state'
 
@@ -192,10 +192,10 @@ const messages = defineMessages({
 						}"
 						@click="devModeCount"
 					>
-						<AstralRinthLogo class="w-6 h-6" />
+						<SmileyXLogo class="w-6 h-6" />
 					</button>
 					<div class="max-w-[200px]">
-						<p class="m-0">AstralRinth App {{ version }}</p>
+						<p class="m-0">SmileyX App {{ version }}</p>
 						<p class="m-0">
 							<span v-if="osPlatform === 'macos'">macOS</span>
 							<span v-else class="capitalize">{{ osPlatform }}</span>
@@ -229,5 +229,5 @@ const messages = defineMessages({
 </template>
 
 <style lang="scss" scoped>
-@import '../../../../../../packages/assets/styles/astralrinth/neon-icon.scss';
+@import "../../../../../../packages/assets/styles/smileyx/neon-icon.scss";
 </style>

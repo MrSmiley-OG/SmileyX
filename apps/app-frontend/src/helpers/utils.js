@@ -32,7 +32,7 @@ export async function getOS() {
 	return await invoke('plugin:utils|get_os')
 }
 
-// This code is modified by AstralRinth
+// This code is modified by SmileyX
 export async function initUpdateLauncher(downloadUrl, filename, osType, autoUpdateSupported) {
   console.log('Downloading build', downloadUrl, filename, osType)
   return await invoke('plugin:utils|init_update_launcher', { downloadUrl, filename, osType })

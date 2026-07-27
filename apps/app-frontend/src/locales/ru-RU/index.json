@@ -206,181 +206,181 @@
   "app.auth-servers.unreachable.header": {
     "message": "Нет связи с серверами аутентификации"
   },
-  "astralrinth.app.launcher-update.available.action": {
+  "smileyx.app.launcher-update.available.action": {
     "message": "Посмотреть обновление"
   },
-  "astralrinth.app.launcher-update.available.text": {
-    "message": "Новая версия AstralRinth уже доступна для загрузки."
+  "smileyx.app.launcher-update.available.text": {
+    "message": "Новая версия SmileyX уже доступна для загрузки."
   },
-  "astralrinth.app.launcher-update.available.title": {
+  "smileyx.app.launcher-update.available.title": {
     "message": "Доступно обновление лаунчера"
   },
-  "astralrinth.app.settings.update-installing": {
+  "smileyx.app.settings.update-installing": {
     "message": "Установка обновления..."
   },
-  "astralrinth.app.settings.view-update-info": {
+  "smileyx.app.settings.view-update-info": {
     "message": "Посмотреть информацию об обновлении"
   },
-  "astralrinth.app.launcher-update-modal.error.close-action": {
+  "smileyx.app.launcher-update-modal.error.close-action": {
     "message": "Закрыть"
   },
-  "astralrinth.app.launcher-update-modal.error.description": {
-    "message": "AstralRinth не удалось скачать файл обновления с сервера."
+  "smileyx.app.launcher-update-modal.error.description": {
+    "message": "SmileyX не удалось скачать файл обновления с сервера."
   },
-  "astralrinth.app.launcher-update-modal.error.header": {
+  "smileyx.app.launcher-update-modal.error.header": {
     "message": "Не удалось скачать обновление"
   },
-  "astralrinth.app.launcher-update-modal.error.help-link": {
-    "message": "релизы репозитория AstralRinth"
+  "smileyx.app.launcher-update-modal.error.help-link": {
+    "message": "релизы репозитория SmileyX"
   },
-  "astralrinth.app.launcher-update-modal.error.help-suffix": {
+  "smileyx.app.launcher-update-modal.error.help-suffix": {
     "message": "если там доступен более новый релиз."
   },
-  "astralrinth.app.launcher-update-modal.error.help-text": {
+  "smileyx.app.launcher-update-modal.error.help-text": {
     "message": "Вы можете скачать его вручную из"
   },
-  "astralrinth.app.launcher-update-modal.error.local-version": {
-    "message": "Локальная версия AstralRinth:"
+  "smileyx.app.launcher-update-modal.error.local-version": {
+    "message": "Локальная версия SmileyX:"
   },
-  "astralrinth.app.launcher-update-modal.error.title": {
+  "smileyx.app.launcher-update-modal.error.title": {
     "message": "Не удалось скачать файл"
   },
-  "astralrinth.app.launcher-update-modal.update.cancel-action": {
+  "smileyx.app.launcher-update-modal.update.cancel-action": {
     "message": "Отмена"
   },
-  "astralrinth.app.launcher-update-modal.update.description": {
+  "smileyx.app.launcher-update-modal.update.description": {
     "message": "Вы используете более старую версию. Рекомендуем обновиться сейчас, чтобы получить последние исправления и улучшения."
   },
-  "astralrinth.app.launcher-update-modal.update.download-action": {
+  "smileyx.app.launcher-update-modal.update.download-action": {
     "message": "Скачать обновление"
   },
-  "astralrinth.app.launcher-update-modal.update.header": {
-    "message": "Обновление лаунчера AstralRinth"
+  "smileyx.app.launcher-update-modal.update.header": {
+    "message": "Обновление лаунчера SmileyX"
   },
-  "astralrinth.app.launcher-update-modal.update.installer-description": {
+  "smileyx.app.launcher-update-modal.update.installer-description": {
     "message": "Выберите пакет установщика, с которым хотите продолжить."
   },
-  "astralrinth.app.launcher-update-modal.update.installer-title": {
+  "smileyx.app.launcher-update-modal.update.installer-title": {
     "message": "Тип установщика"
   },
-  "astralrinth.app.launcher-update-modal.update.installed-version": {
+  "smileyx.app.launcher-update-modal.update.installed-version": {
     "message": "💾 Установленная и запущенная версия:"
   },
-  "astralrinth.app.launcher-update-modal.update.latest-release-tag": {
+  "smileyx.app.launcher-update-modal.update.latest-release-tag": {
     "message": "☁️ Тег последнего релиза:"
   },
-  "astralrinth.app.launcher-update-modal.update.latest-release-title": {
+  "smileyx.app.launcher-update-modal.update.latest-release-title": {
     "message": "☁️ Название последнего релиза:"
   },
-  "astralrinth.app.launcher-update-modal.update.notice-lead": {
+  "smileyx.app.launcher-update-modal.update.notice-lead": {
     "message": "Перед установкой обновления сохраните работу, закройте все запущенные экземпляры лаунчера и сделайте резервную копию его данных."
   },
-  "astralrinth.app.launcher-update-modal.update.notice-macos": {
+  "smileyx.app.launcher-update-modal.update.notice-macos": {
     "message": "На macOS важные данные могут находиться в"
   },
-  "astralrinth.app.launcher-update-modal.update.notice-outro": {
+  "smileyx.app.launcher-update-modal.update.notice-outro": {
     "message": "Чтобы избежать потери данных, сохраните резервную копию в безопасном месте перед продолжением."
   },
-  "astralrinth.app.launcher-update-modal.update.notice-windows": {
+  "smileyx.app.launcher-update-modal.update.notice-windows": {
     "message": "На Windows важные данные могут находиться в"
   },
-  "astralrinth.app.launcher-update-modal.update.notice-title": {
+  "smileyx.app.launcher-update-modal.update.notice-title": {
     "message": "⚠️ Перед продолжением"
   },
-  "astralrinth.app.launcher-update-modal.update.repository-link": {
+  "smileyx.app.launcher-update-modal.update.repository-link": {
     "message": "Открыть репозиторий проекта"
   },
-  "astralrinth.app.launcher-update-modal.update.select-installer": {
+  "smileyx.app.launcher-update-modal.update.select-installer": {
     "message": "Выберите установщик"
   },
-  "astralrinth.app.launcher-update-modal.update.title": {
-    "message": "Доступна новая версия лаунчера AstralRinth."
+  "smileyx.app.launcher-update-modal.update.title": {
+    "message": "Доступна новая версия лаунчера SmileyX."
   },
-  "astralrinth.app.minecraft-account.add-elyby-account": {
+  "smileyx.app.minecraft-account.add-elyby-account": {
     "message": "Добавить Ely.by аккаунт"
   },
-  "astralrinth.app.minecraft-account.add-offline-account": {
+  "smileyx.app.minecraft-account.add-offline-account": {
     "message": "Добавить офлайн-аккаунт"
   },
-  "astralrinth.app.minecraft-account.error.authentication-elyby.description": {
+  "smileyx.app.minecraft-account.error.authentication-elyby.description": {
     "message": "Произошла ошибка при входе в аккаунт."
   },
-  "astralrinth.app.minecraft-account.error.authentication-elyby.header": {
+  "smileyx.app.minecraft-account.error.authentication-elyby.header": {
     "message": "Ошибка во время авторизации через Ely.by"
   },
-  "astralrinth.app.minecraft-account.error.input-elyby.description": {
+  "smileyx.app.minecraft-account.error.input-elyby.description": {
     "message": "Произошла ошибка при добавлении аккаунта Ely.by. Пожалуйста, выполните рекомендации ниже."
   },
-  "astralrinth.app.minecraft-account.error.input-elyby.header": {
+  "smileyx.app.minecraft-account.error.input-elyby.header": {
     "message": "Ошибка во время ввода данных для Ely.by"
   },
-  "astralrinth.app.minecraft-account.error.input-elyby.name-or-email-hint": {
+  "smileyx.app.minecraft-account.error.input-elyby.name-or-email-hint": {
     "message": "Проверьте, что имя игрока или email введены корректно."
   },
-  "astralrinth.app.minecraft-account.error.input-elyby.password-hint": {
+  "smileyx.app.minecraft-account.error.input-elyby.password-hint": {
     "message": "Проверьте, что пароль введён корректно."
   },
-  "astralrinth.app.minecraft-account.error.input-offline.description": {
+  "smileyx.app.minecraft-account.error.input-offline.description": {
     "message": "Произошла ошибка при добавлении офлайн-аккаунта. Пожалуйста, выполните рекомендации ниже."
   },
-  "astralrinth.app.minecraft-account.error.input-offline.format-hint": {
+  "smileyx.app.minecraft-account.error.input-offline.format-hint": {
     "message": "Убедитесь, что имя соответствует требуемому формату `{nameExp}`"
   },
-  "astralrinth.app.minecraft-account.error.input-offline.header": {
+  "smileyx.app.minecraft-account.error.input-offline.header": {
     "message": "Ошибка во время ввода данных для офлайн-аккаунта"
   },
-  "astralrinth.app.minecraft-account.error.input-offline.length-hint": {
+  "smileyx.app.minecraft-account.error.input-offline.length-hint": {
     "message": "Имя игрока должно содержать не менее {min} и не более {max} символов."
   },
-  "astralrinth.app.minecraft-account.error.input-offline.name-hint": {
+  "smileyx.app.minecraft-account.error.input-offline.name-hint": {
     "message": "Проверьте, что имя игрока введено корректно."
   },
-  "astralrinth.app.minecraft-account.error.retry-action": {
+  "smileyx.app.minecraft-account.error.retry-action": {
     "message": "Повторить"
   },
-  "astralrinth.app.minecraft-account.error.unexpected.description": {
+  "smileyx.app.minecraft-account.error.unexpected.description": {
     "message": "Произошла непредвиденная ошибка. Пожалуйста, попробуйте позже."
   },
-  "astralrinth.app.minecraft-account.error.unexpected.header": {
+  "smileyx.app.minecraft-account.error.unexpected.header": {
     "message": "Произошла непредвиденная ошибка"
   },
-  "astralrinth.app.minecraft-account.input.elyby.header": {
+  "smileyx.app.minecraft-account.input.elyby.header": {
     "message": "Авторизация через Ely.by"
   },
-  "astralrinth.app.minecraft-account.input.elyby.login.label": {
+  "smileyx.app.minecraft-account.input.elyby.login.label": {
     "message": "Введите имя игрока или email (предпочтительно)"
   },
-  "astralrinth.app.minecraft-account.input.elyby.login.placeholder": {
+  "smileyx.app.minecraft-account.input.elyby.login.placeholder": {
     "message": "Введите имя игрока или email..."
   },
-  "astralrinth.app.minecraft-account.input.elyby.password.label": {
+  "smileyx.app.minecraft-account.input.elyby.password.label": {
     "message": "Введите пароль"
   },
-  "astralrinth.app.minecraft-account.input.elyby.password.placeholder": {
+  "smileyx.app.minecraft-account.input.elyby.password.placeholder": {
     "message": "Введите пароль..."
   },
-  "astralrinth.app.minecraft-account.input.elyby.two-factor.continue-action": {
+  "smileyx.app.minecraft-account.input.elyby.two-factor.continue-action": {
     "message": "Продолжить"
   },
-  "astralrinth.app.minecraft-account.input.elyby.two-factor.header": {
+  "smileyx.app.minecraft-account.input.elyby.two-factor.header": {
     "message": "Ely.by запросил код 2FA для авторизации"
   },
-  "astralrinth.app.minecraft-account.input.elyby.two-factor.label": {
+  "smileyx.app.minecraft-account.input.elyby.two-factor.label": {
     "message": "Введите код 2FA"
   },
-  "astralrinth.app.minecraft-account.input.elyby.two-factor.placeholder": {
+  "smileyx.app.minecraft-account.input.elyby.two-factor.placeholder": {
     "message": "Введите код 2FA..."
   },
-  "astralrinth.app.minecraft-account.input.login-action": {
+  "smileyx.app.minecraft-account.input.login-action": {
     "message": "Войти"
   },
-  "astralrinth.app.minecraft-account.input.offline.header": {
+  "smileyx.app.minecraft-account.input.offline.header": {
     "message": "Добавить новый офлайн-аккаунт"
   },
-  "astralrinth.app.minecraft-account.input.offline.name.label": {
+  "smileyx.app.minecraft-account.input.offline.name.label": {
     "message": "Введите имя игрока"
   },
-  "astralrinth.app.minecraft-account.input.offline.name.placeholder": {
+  "smileyx.app.minecraft-account.input.offline.name.placeholder": {
     "message": "Введите имя игрока..."
   },
   "app.browse.add-servers-to-instance": {

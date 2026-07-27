@@ -466,7 +466,7 @@ provideInstallationSettings({
 </template>
 
 <style lang="scss" scoped>
-@import '../../../../../../packages/assets/styles/astralrinth/neon-button.scss';
-@import '../../../../../../packages/assets/styles/astralrinth/neon-text.scss';
-@import '../../../../../../packages/assets/styles/astralrinth/neon-icon.scss';
+@import '../../../../../../packages/assets/styles/smileyx/neon-button.scss';
+@import '../../../../../../packages/assets/styles/smileyx/neon-text.scss';
+@import '../../../../../../packages/assets/styles/smileyx/neon-icon.scss';
 </style>
